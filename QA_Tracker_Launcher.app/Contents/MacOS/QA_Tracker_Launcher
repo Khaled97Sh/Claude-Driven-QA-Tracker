@@ -1,0 +1,9 @@
+#!/bin/bash
+SCRIPT="$(cd "$(dirname "$0")/../Resources" && pwd)/run.sh"
+osascript <<AS
+tell application "Terminal"
+  activate
+  do script "bash \"$SCRIPT\""
+end tell
+AS
+exit 0

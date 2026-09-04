@@ -1,0 +1,6 @@
+# Backup snapshots created during development
+*.bak-*
+
+# OS junk
+.DS_Store
+Thumbs.db
