@@ -415,8 +415,8 @@ body::before{
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="dashboard"><span>📊 Dashboard</span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="android"><span>🤖 Android</span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="ios"><span>🍎 iOS</span></label>
-      <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="security"><span>🔒 <span data-i18n="plat_security">الأمان</span></span></label>
-      <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="accessibility"><span>♿ <span data-i18n="plat_accessibility">إمكانية الوصول</span></span></label>
+      <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="security"><span>🔒 Security</span></label>
+      <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="accessibility"><span>♿ Accessibility</span></label>
     </div>
     <div style="margin-top:14px">
       <label class="elbl" for="tc-count-select" data-i18n="tc_count_label" style="display:block;margin-bottom:6px">الحد الأدنى لعدد حالات الاختبار</label>
@@ -840,8 +840,6 @@ const I18N = {
     lang_toggle_title: 'تغيير اللغة',
     platform_card_title: 'المنصات المستهدفة',
     platform_card_desc: 'اختر المنصات المشمولة في هذا المشروع — ستظهر كتبويبات فلترة بعد تحميل حالات الاختبار.',
-    plat_security: 'الأمان',
-    plat_accessibility: 'إمكانية الوصول',
     tc_count_label: 'الحد الأدنى لعدد حالات الاختبار',
     tc_count_uncounted: 'غير محدود (أكبر عدد ممكن)',
     claude_login_title: 'تسجيل الدخول بـ Claude',
@@ -1000,8 +998,6 @@ const I18N = {
     lang_toggle_title: 'Change language',
     platform_card_title: 'Target Platforms',
     platform_card_desc: 'Choose the platforms covered by this project — they\'ll appear as filter tabs after loading test cases.',
-    plat_security: 'Security',
-    plat_accessibility: 'Accessibility',
     tc_count_label: 'Minimum number of test cases',
     tc_count_uncounted: 'Uncounted (as many as possible)',
     claude_login_title: 'Sign in with Claude',
@@ -1206,8 +1202,8 @@ const PLATFORM_DEFS = [
   { key:'dashboard',     label:'Dashboard',      emoji:'📊', match:['dashboard'] },
   { key:'android',       label:'Android',        emoji:'🤖', match:['android'] },
   { key:'ios',           label:'iOS',            emoji:'🍎', match:['ios'] },
-  { key:'security',      i18nKey:'plat_security',      emoji:'🔒', match:['security'] },
-  { key:'accessibility', i18nKey:'plat_accessibility',  emoji:'♿', match:['accessibility','a11y','wcag'] },
+  { key:'security',      label:'Security',      emoji:'🔒', match:['security'] },
+  { key:'accessibility', label:'Accessibility', emoji:'♿', match:['accessibility','a11y','wcag'] },
 ];
 function platLabel(d) { return d.i18nKey ? t(d.i18nKey) : d.label; }
 // Preserves current filter semantics exactly, used only when zero checkboxes are checked
