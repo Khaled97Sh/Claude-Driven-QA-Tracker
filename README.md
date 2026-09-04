@@ -29,7 +29,7 @@ No build step, no server, no database. Everything runs from one HTML file, opene
 
 Download the latest installer for your platform from the [**Releases**](../../releases/latest) page:
 
-- **macOS** — download `QA-Tracker-Claude-Edition-macOS.dmg`, open it, drag **QA Tracker** into **Applications**, then double-click it there.
+- **macOS** — download `QA-Tracker-Claude-Edition-macOS-AppleSilicon.dmg` (M1/M2/M3/M4 Macs) or `-Intel.dmg` (older Intel Macs — check via  → About This Mac), open it, drag **QA Tracker** into **Applications**, then double-click it there.
   - Includes its own bundled Python runtime, so it works even on a completely clean Mac.
   - First launch: Gatekeeper will say the app is from an unidentified developer — right-click the app → **Open** → **Open Anyway** (only needed once).
 - **Windows** — download `QA-Tracker-Claude-Edition-Setup.exe` and run it. It installs to your user folder (no admin rights needed), adds Start Menu + Desktop shortcuts, and launches the app automatically when setup finishes.
