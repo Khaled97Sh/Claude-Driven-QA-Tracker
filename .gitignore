@@ -4,3 +4,11 @@
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Installer build artifacts (downloaded/generated at build time, not source)
+installer/windows/python/
+installer/macos/runtime/
+dist/
+*.exe
+*.dmg
+

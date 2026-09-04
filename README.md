@@ -25,20 +25,57 @@ No build step, no server, no database. Everything runs from one HTML file, opene
 
 ## 🚀 Quick Start
 
-### macOS
+### One-click installers (recommended — no prerequisites needed)
+
+Download the latest installer for your platform from the [**Releases**](../../releases/latest) page:
+
+- **macOS** — download `QA-Tracker-Claude-Edition-macOS.dmg`, open it, drag **QA Tracker** into **Applications**, then double-click it there.
+  - Includes its own bundled Python runtime, so it works even on a completely clean Mac.
+  - First launch: Gatekeeper will say the app is from an unidentified developer — right-click the app → **Open** → **Open Anyway** (only needed once).
+- **Windows** — download `QA-Tracker-Claude-Edition-Setup.exe` and run it. It installs to your user folder (no admin rights needed), adds Start Menu + Desktop shortcuts, and launches the app automatically when setup finishes.
+  - Includes its own bundled Python runtime — no separate Python install needed.
+  - First launch: Windows SmartScreen may say "Windows protected your PC" — click **More info** → **Run anyway** (only needed once, since this isn't a code-signed release).
+
+Either way, the app opens automatically in your browser at `http://localhost:8080/qa_tracker.html` once installed.
+
+### Prefer not to install anything? Run it in place instead
+
+<details>
+<summary>macOS — <code>QA_Tracker_Launcher.app</code></summary>
+
 1. Double-click **`QA_Tracker_Launcher.app`**.
 2. If macOS blocks it: right-click → **Open** → **Open Anyway**.
 3. Your browser opens automatically at `http://localhost:8080/qa_tracker.html`.
 4. To stop the app, close the Terminal window that opened.
 
-### Windows
+Requires **Python 3** on your system (the installer above bundles its own, but this in-place launcher doesn't).
+</details>
+
+<details>
+<summary>Windows — <code>.bat</code> / <code>.vbs</code></summary>
+
 - **With a console window:** double-click **`QA_Tracker_Windows.bat`**.
 - **Silently (no window):** double-click **`QA_Tracker_Windows.vbs`**. To stop it, open Task Manager and end the `python.exe` process.
 
-Both require **Python 3** on your `PATH` ([download here](https://www.python.org) — check "Add Python to PATH" during install on Windows).
+Requires **Python 3** on your `PATH` ([download here](https://www.python.org) — check "Add Python to PATH" during install).
+</details>
 
-### Just open the file
-`qa_tracker.html` is a normal static HTML file — you can also open it directly in any modern browser (double-click it, or drag it into a browser window) without any launcher or server at all.
+<details>
+<summary>Just open the HTML file directly</summary>
+
+`qa_tracker.html` is a normal static HTML file — you can open it directly in any modern browser (double-click it, or drag it into a browser window) without any launcher or server at all. Note: Google Sign-In and the Claude API calls require an `http://` origin to work correctly, so this route only fully works for the manual JSON-import flow without those two features.
+</details>
+
+### Building the installers yourself
+
+The installers aren't committed to this repo (they're built artifacts, not source) — they're published on the [Releases](../../releases) page. To rebuild them yourself:
+
+```bash
+brew install makensis   # one-time, macOS only — lets you build the Windows installer too
+./build_installers.sh
+```
+
+This downloads the bundled Python runtimes for each platform and produces both installers in `dist/`. See `installer/windows/` and `installer/macos/` for the individual build scripts.
 
 ---
 
@@ -88,9 +125,13 @@ The included launchers (`QA_Tracker_Launcher.app`, `QA_Tracker_Windows.bat/.vbs`
 
 ```
 qa_tracker.html            The entire app — open this directly
-QA_Tracker_Launcher.app/   macOS double-click launcher
-QA_Tracker_Windows.bat     Windows launcher (visible console)
-QA_Tracker_Windows.vbs     Windows launcher (silent)
+QA_Tracker_Launcher.app/   macOS double-click launcher (run in place)
+QA_Tracker_Windows.bat     Windows launcher (visible console, run in place)
+QA_Tracker_Windows.vbs     Windows launcher (silent, run in place)
+installer/                Sources for the one-click installers (see Releases for the built files)
+  windows/                 NSIS installer script + Windows launcher + Python-fetch script
+  macos/                   .dmg build script + Python-fetch script
+build_installers.sh        Builds both installers in one command
 README.md                  This file
 ```
 
