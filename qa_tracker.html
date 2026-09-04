@@ -115,6 +115,8 @@ body::before{
 .plat-chk.checked{border-color:var(--accent);background:var(--status-pending-bg);box-shadow:0 2px 8px var(--accent-glow)}
 .login-row{display:flex;gap:8px;align-items:center;margin-bottom:12px}
 #claude-api-key{flex:1;font-size:14px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-family:Arial;direction:ltr;text-align:left;background:var(--surface);color:var(--text);transition:border-color .15s}
+#tc-count-select{width:100%;font-size:14px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-family:Arial;background:var(--surface);color:var(--text);transition:border-color .15s}
+#tc-count-select:focus{outline:none;border-color:var(--accent)}
 #claude-api-key:focus{outline:none;border-color:var(--accent)}
 .btn-help{white-space:nowrap;background:none;border:1px solid var(--accent);color:var(--accent);padding:9px 14px;border-radius:12px;font-size:13px;cursor:pointer;font-family:Arial;transition:all .15s}
 .btn-help:hover{background:var(--accent);color:#fff;transform:translateY(-1px)}
@@ -415,6 +417,20 @@ body::before{
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="ios"><span>🍎 iOS</span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="security"><span>🔒 <span data-i18n="plat_security">الأمان</span></span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="accessibility"><span>♿ <span data-i18n="plat_accessibility">إمكانية الوصول</span></span></label>
+    </div>
+    <div style="margin-top:14px">
+      <label class="elbl" for="tc-count-select" data-i18n="tc_count_label" style="display:block;margin-bottom:6px">الحد الأدنى لعدد حالات الاختبار</label>
+      <select id="tc-count-select" onchange="onTcCountChange()">
+        <option value="20">20</option>
+        <option value="40" selected>40</option>
+        <option value="60">60</option>
+        <option value="80">80</option>
+        <option value="100">100</option>
+        <option value="120">120</option>
+        <option value="140">140</option>
+        <option value="160">160</option>
+        <option value="uncounted" data-i18n="tc_count_uncounted">غير محدود (أكبر عدد ممكن)</option>
+      </select>
     </div>
   </div>
 
@@ -826,6 +842,8 @@ const I18N = {
     platform_card_desc: 'اختر المنصات المشمولة في هذا المشروع — ستظهر كتبويبات فلترة بعد تحميل حالات الاختبار.',
     plat_security: 'الأمان',
     plat_accessibility: 'إمكانية الوصول',
+    tc_count_label: 'الحد الأدنى لعدد حالات الاختبار',
+    tc_count_uncounted: 'غير محدود (أكبر عدد ممكن)',
     claude_login_title: 'تسجيل الدخول بـ Claude',
     claude_login_desc: 'أدخل مفتاح Anthropic API الخاص بك لتوليد حالات الاختبار تلقائياً من SRS، بدون الحاجة لملف JSON.',
     claude_help_btn: 'الحصول عليه ↗',
@@ -984,6 +1002,8 @@ const I18N = {
     platform_card_desc: 'Choose the platforms covered by this project — they\'ll appear as filter tabs after loading test cases.',
     plat_security: 'Security',
     plat_accessibility: 'Accessibility',
+    tc_count_label: 'Minimum number of test cases',
+    tc_count_uncounted: 'Uncounted (as many as possible)',
     claude_login_title: 'Sign in with Claude',
     claude_login_desc: 'Enter your Anthropic API key to auto-generate test cases from an SRS, no JSON file needed.',
     claude_help_btn: 'Get one ↗',
@@ -1523,6 +1543,16 @@ function getSelectedPlatformDefs() {
   return PLATFORM_DEFS.filter(d => checked.has(d.key));
 }
 
+// ── Minimum test-case count ──────────────────────────────────────────────────
+function getSelectedTcCount() {
+  const el = document.getElementById('tc-count-select');
+  return el ? el.value : '40';
+}
+function onTcCountChange() {
+  const promptPre = document.getElementById('prompt-pre-inline');
+  if (promptPre && typeof buildManualPrompt === 'function') promptPre.textContent = buildManualPrompt(LANG);
+}
+
 function renderPlatformTabs() {
   const checked = getSelectedPlatformDefs();
   const useDefs = checked.length ? checked : LEGACY_PLATFORM_DEFS;
@@ -1541,6 +1571,8 @@ document.addEventListener('change', e => {
   if (e.target && e.target.classList && e.target.classList.contains('plat-input')) {
     const label = e.target.closest('.plat-chk');
     if (label) label.classList.toggle('checked', e.target.checked);
+    const promptPre = document.getElementById('prompt-pre-inline');
+    if (promptPre && typeof buildManualPrompt === 'function') promptPre.textContent = buildManualPrompt(LANG);
   }
 });
 
@@ -1666,9 +1698,14 @@ async function extractSrsText(file) {
 
 function buildApiPrompt(platformDefs, srsText) {
   const platformList = platformDefs.map(d => `- "${platLabel(d)}"`).join('\n');
+  const platformNames = platformDefs.map(d => platLabel(d)).join(', ');
   const rule1 = LANG === 'en'
     ? 'Output language: ALWAYS write every test case field (title, precondition, steps, expected result, notes) in English — regardless of what language the feature spec below is written in (it may be in English, Arabic, or mixed). Never leave a field in Arabic just because the source spec was in Arabic.'
     : 'Output language: ALWAYS write every test case field (title, precondition, steps, expected result, notes) in Arabic — regardless of what language the feature spec below is written in (it may be in English, Arabic, or mixed). The tester reading this is Arabic-speaking. Never leave a field in English just because the source spec was in English.';
+  const tcCount = (typeof getSelectedTcCount === 'function') ? getSelectedTcCount() : '40';
+  const rule8 = tcCount === 'uncounted'
+    ? `Do not stop at a minimum — generate as many test cases as the spec can genuinely support, aiming for exhaustive, comprehensive coverage across ${platformNames} (roughly 800-1000 test cases for a reasonably detailed spec). Only stop once every happy path, validation rule, error state, and edge case you can identify has its own case.`
+    : `Minimum ${tcCount} test cases total, distributed across ${platformNames}`;
   return `You are a senior QA engineer. Read the SRS/feature spec below and generate a comprehensive test case list.
 
 Respond with ONLY a single valid JSON object — no markdown code fences, no prose before or after, nothing but the JSON.
@@ -1709,7 +1746,7 @@ Rules:
 5. Cover happy path, validation, error states, UI states, and platform-specific concerns for EACH platform listed above
 6. Steps must be numbered, one per line using \\n
 7. Expected result must be highly specific — never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states
-8. Minimum 30 test cases total, distributed across the selected platforms above
+8. ${rule8}
 9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)
 
 Feature spec:
@@ -1838,7 +1875,18 @@ function buildManualPrompt(lang) {
   const rule1 = lang === 'en'
     ? 'Output language: ALWAYS write every test case field (title, precondition, steps, expected result, notes) in English — regardless of what language the feature spec below is written in (it may be in English, Arabic, or mixed). Never leave a field in Arabic just because the source spec was in Arabic.'
     : 'Output language: ALWAYS write every test case field (title, precondition, steps, expected result, notes) in Arabic — regardless of what language the feature spec below is written in (it may be in English, Arabic, or mixed). The tester reading this is Arabic-speaking. Never leave a field in English just because the source spec was in English.';
-  return 'You are a senior QA engineer. Read the SRS/feature spec below and generate a comprehensive test case list.\n\nCreate a FILE called test_cases.json and write ONLY a valid JSON object into it \u2014 no markdown, no backticks, no explanation before or after the file.\n\nJSON format:\n{\n  "feature": "Feature name here",\n  "platform": "Frontend & CMS & API",\n  "generated": "YYYY-MM-DD",\n  "sections": [\n    {\n      "name": "Section name",\n      "cases": [\n        {\n          "id": "TC-001",\n          "title": "Short descriptive title",\n          "priority": "P1",\n          "category": "Explicit",\n          "platform": "Frontend",\n          "pre": "Precondition text",\n          "steps": "1. Step one\\n2. Step two\\n3. Step three",\n          "exp": "Expected result \u2014 be specific, name the API endpoint, parameter, CMS state, or UI element",\n          "environment": "e.g. Android 14, Pixel 8 / Chrome 128, Staging API (optional)"\n        }\n      ]\n    }\n  ]\n}\n\nPlatform values to use:\n- "Frontend" \u2014 for public-facing website and responsive web UI cases\n- "CMS" \u2014 for Admin panel, content creation, workflow, and RBAC cases\n- "Backend/API" \u2014 for API endpoints, rate limiting, CRM integrations, and database interactions\n- "Web (All)" \u2014 if the case applies end-to-end across Frontend, CMS, and API\n\nRules:\n1. ' + rule1 + '\n2. Keep API endpoints, parameters, system roles, and technical terms in English (e.g. GET /api/verify, is_active = 1, Publisher, RTL/LTR)\n3. priority: P1 = critical flow/security, P2 = important feature, P3 = edge cases/nice-to-have\n4. category: "Explicit" if it comes directly from the spec, "Implicit" if it is a standard web/system expectation beyond the spec\n5. Cover ALL of these for EACH platform mentioned in the spec:\n   a. Happy path \u2014 main success flows (submitting forms, publishing content, successful API calls)\n   b. Validation \u2014 empty fields, incorrect formats, boundary values, XSS/SQL injection prevention\n   c. Error states \u2014 API errors, network loss, server 500, timeout, rate limit reached\n   d. UI states \u2014 loading spinners, empty states, success/error messages, RTL/LTR layout\n   e. Implicit Web \u2014 browser refresh mid-flow, browser back/forward, session expiry, multi-tab behavior\n   f. Frontend Specifics \u2014 responsive (Desktop, Tablet, Mobile Web), cross-browser (Chrome, Safari, Edge, Firefox), WCAG 2.2 AAA\n   g. CMS Specifics \u2014 concurrent editing conflicts, RBAC restrictions, multi-stage workflow transitions, audit logs\n   h. Business rules \u2014 each specific rule in the spec becomes a separate test case\n6. Steps must be numbered, one per line using \\n\n7. Expected result must be highly specific \u2014 never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states\n8. Minimum 30 test cases, aim for complete coverage across Frontend, CMS, and API platforms\n9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)\n\nFeature spec:\n[PASTE YOUR SRS HERE]';
+
+  const checked = (typeof getSelectedPlatformDefs === 'function') ? getSelectedPlatformDefs() : [];
+  const platformDefs = checked.length ? checked : LEGACY_PLATFORM_DEFS;
+  const platformList = platformDefs.map(d => `- "${platLabel(d)}"`).join('\n');
+  const platformNames = platformDefs.map(d => platLabel(d)).join(', ');
+
+  const tcCount = (typeof getSelectedTcCount === 'function') ? getSelectedTcCount() : '40';
+  const rule8 = tcCount === 'uncounted'
+    ? ('Do not stop at a minimum — generate as many test cases as the spec can genuinely support, aiming for exhaustive, comprehensive coverage across ' + platformNames + ' (roughly 800-1000 test cases for a reasonably detailed spec). Only stop once every happy path, validation rule, error state, and edge case you can identify has its own case.')
+    : ('Minimum ' + tcCount + ' test cases, aim for complete coverage across ' + platformNames);
+
+  return 'You are a senior QA engineer. Read the SRS/feature spec below and generate a comprehensive test case list.\n\nCreate a FILE called test_cases.json and write ONLY a valid JSON object into it \u2014 no markdown, no backticks, no explanation before or after the file.\n\nJSON format:\n{\n  "feature": "Feature name here",\n  "platform": "Frontend & CMS & API",\n  "generated": "YYYY-MM-DD",\n  "sections": [\n    {\n      "name": "Section name",\n      "cases": [\n        {\n          "id": "TC-001",\n          "title": "Short descriptive title",\n          "priority": "P1",\n          "category": "Explicit",\n          "platform": "Frontend",\n          "pre": "Precondition text",\n          "steps": "1. Step one\\n2. Step two\\n3. Step three",\n          "exp": "Expected result \u2014 be specific, name the API endpoint, parameter, CMS state, or UI element",\n          "environment": "e.g. Android 14, Pixel 8 / Chrome 128, Staging API (optional)"\n        }\n      ]\n    }\n  ]\n}\n\nPlatform values to use (cover ALL of these that apply):\n' + platformList + '\n\nRules:\n1. ' + rule1 + '\n2. Keep API endpoints, parameters, system roles, and technical terms in English (e.g. GET /api/verify, is_active = 1, Publisher, RTL/LTR)\n3. priority: P1 = critical flow/security, P2 = important feature, P3 = edge cases/nice-to-have\n4. category: "Explicit" if it comes directly from the spec, "Implicit" if it is a standard web/system expectation beyond the spec\n5. Cover ALL of these for EACH platform mentioned in the spec:\n   a. Happy path \u2014 main success flows (submitting forms, publishing content, successful API calls)\n   b. Validation \u2014 empty fields, incorrect formats, boundary values, XSS/SQL injection prevention\n   c. Error states \u2014 API errors, network loss, server 500, timeout, rate limit reached\n   d. UI states \u2014 loading spinners, empty states, success/error messages, RTL/LTR layout\n   e. Implicit Web \u2014 browser refresh mid-flow, browser back/forward, session expiry, multi-tab behavior\n   f. Frontend Specifics (if applicable) \u2014 responsive (Desktop, Tablet, Mobile Web), cross-browser (Chrome, Safari, Edge, Firefox), WCAG 2.2 AAA\n   g. CMS Specifics (if applicable) \u2014 concurrent editing conflicts, RBAC restrictions, multi-stage workflow transitions, audit logs\n   h. Mobile Specifics (if applicable, Android/iOS) \u2014 OS version fragmentation, permissions, offline behavior, push notifications, app backgrounding\n   i. Security Specifics (if applicable) \u2014 authN/authZ boundaries, injection/XSS prevention, rate limiting, session handling\n   j. Accessibility Specifics (if applicable) \u2014 screen reader support, keyboard navigation, color contrast, WCAG 2.2 AAA\n   k. Business rules \u2014 each specific rule in the spec becomes a separate test case\n6. Steps must be numbered, one per line using \\n\n7. Expected result must be highly specific \u2014 never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states\n8. ' + rule8 + '\n9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)\n\nFeature spec:\n[PASTE YOUR SRS HERE]';
 }
 
 // ── File handling ─────────────────────────────────────────────────────────────
