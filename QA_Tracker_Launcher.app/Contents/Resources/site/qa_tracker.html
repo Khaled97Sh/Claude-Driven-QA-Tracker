@@ -92,6 +92,10 @@ body::before{
 .upload-card{background:var(--surface-glass);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:1px solid var(--glass-border);border-radius:22px;padding:32px;width:100%;max-width:600px;box-shadow:var(--shadow-soft);transition:box-shadow .2s,transform .2s}
 .upload-card h2{font-size:22px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
 .upload-card p{font-size:14px;color:var(--text-muted);margin-bottom:24px;line-height:1.7}
+.autosave-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--status-pending-bg);border:1px solid var(--accent);border-radius:14px;padding:14px 18px;margin-bottom:20px;font-size:13.5px}
+.autosave-banner-actions{display:flex;gap:8px;flex-shrink:0}
+.autosave-banner-actions button{font-size:13px;padding:7px 16px;border-radius:10px;border:0;cursor:pointer;font-family:Arial;font-weight:500;background:linear-gradient(135deg,var(--accent),var(--accent-hover));color:#fff;box-shadow:0 2px 8px var(--accent-glow)}
+.autosave-banner-actions button.ghost{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
 .drop-zone{border:2px dashed var(--border);border-radius:16px;padding:40px 24px;cursor:pointer;background:transparent;text-align:center;transition:all .2s;margin-bottom:16px}
 .drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--status-pending-bg)}
 .dz-icon{font-size:40px;margin-bottom:10px}
@@ -152,6 +156,7 @@ body::before{
 .btn-pdf{background:linear-gradient(135deg,var(--accent),var(--accent-hover));border-color:transparent;box-shadow:0 3px 10px var(--accent-glow)}.btn-pdf:hover{box-shadow:0 5px 16px var(--accent-glow-strong)}
 .btn-csv{background:#185fa5;border-color:#185fa5}.btn-csv:hover{background:#0e4a85}
 .btn-reload{background:#0f6e56;border-color:#0f6e56}.btn-reload:hover{background:#0a5040}
+.btn-save{background:#6a4fb8;border-color:#6a4fb8}.btn-save:hover{background:#5a3fa0}
 .pdd{position:relative;display:inline-block}
 .pdm{display:none;position:absolute;top:calc(100% + 6px);left:0;background:rgba(30,30,30,.85);backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,255,255,.08);border-radius:14px;min-width:200px;z-index:200;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,.45)}
 .pdm.open{display:block;animation:glassIn .15s ease-out}
@@ -405,12 +410,36 @@ body::before{
     <button type="button" class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" data-i18n-title="theme_toggle_title" title="تبديل المظهر"></button>
   </div>
 
+  <div class="upload-card" id="resume-project-card">
+    <div id="autosave-banner" class="autosave-banner" style="display:none">
+      <span id="autosave-banner-text"></span>
+      <div class="autosave-banner-actions">
+        <button type="button" onclick="resumeAutosave()" data-i18n="resume_autosave_btn">استكمال</button>
+        <button type="button" class="ghost" onclick="dismissAutosave()" data-i18n="dismiss_autosave_btn">تجاهل</button>
+      </div>
+    </div>
+    <h2 data-i18n="resume_project_title">📁 استكمال مشروع محفوظ</h2>
+    <p data-i18n="resume_project_desc">لديك ملف مشروع محفوظ (.qaproject.json)؟ ارفعه هنا لاستكمال الاختبار من حيث توقفت — بكل الحالات والملاحظات والمرفقات كما هي.</p>
+    <div class="drop-zone" id="project-drop-zone"
+      onclick="document.getElementById('project-file-input').click()"
+      ondragover="onProjectDrag(event,true)"
+      ondragleave="onProjectDrag(event,false)"
+      ondrop="onProjectDrop(event)">
+      <input type="file" id="project-file-input" accept=".json" onchange="onProjectFileSelect(this)">
+      <div class="dz-icon">📁</div>
+      <h3 data-i18n="drop_project_title">اسحب ملف المشروع هنا أو اضغط للاختيار</h3>
+      <p>.qaproject.json</p>
+    </div>
+    <div class="status-msg" id="project-status-msg"></div>
+  </div>
+
   <div class="upload-card" id="platform-card">
     <h2 data-i18n="platform_card_title">المنصات المستهدفة</h2>
     <p data-i18n="platform_card_desc">اختر المنصات المشمولة في هذا المشروع — ستظهر كتبويبات فلترة بعد تحميل حالات الاختبار.</p>
     <div class="plat-grid" id="plat-grid">
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="frontend"><span>🖥️ Front-end</span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="backend"><span>⚙️ Back-end</span></label>
+      <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="api"><span>🔌 API</span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="cms"><span>🗂️ CMS</span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="dashboard"><span>📊 Dashboard</span></label>
       <label class="plat-chk"><input type="checkbox" class="plat-input" data-plat="android"><span>🤖 Android</span></label>
@@ -523,7 +552,35 @@ body::before{
         <p>.txt · .md · .pdf · .docx</p>
       </div>
 
-      <button class="load-btn" id="generate-btn" onclick="generateFromSRS()" disabled data-i18n="generate_btn">✨ توليد حالات الاختبار</button>
+      <div style="margin-top:18px">
+        <h3 style="font-size:14px;margin-bottom:4px" data-i18n="api_collection_title">مجموعة API (اختياري)</h3>
+        <p style="font-size:12px;color:#aaa;margin-bottom:10px" data-i18n="api_collection_desc">ارفع ملف OpenAPI/Swagger JSON أو مجموعة Postman لتوليد حالات اختبار API دقيقة تعتمد على المسارات الفعلية. اختياري — التوليد يعمل من SRS فقط بدونه.</p>
+
+        <div id="api-collection-file-prev" class="file-prev" style="display:none">
+          <div class="fp-info">
+            <span style="font-size:22px">🔌</span>
+            <div>
+              <div class="fp-name" id="api-collection-fp-name"></div>
+              <div class="fp-size" id="api-collection-fp-size"></div>
+            </div>
+          </div>
+          <button class="fp-clear" onclick="clearApiCollectionFile()" data-i18n-title="remove_title" title="إزالة">✕</button>
+        </div>
+
+        <div class="drop-zone" id="api-collection-drop-zone"
+          onclick="document.getElementById('api-collection-file-input').click()"
+          ondragover="onApiCollectionDrag(event,true)"
+          ondragleave="onApiCollectionDrag(event,false)"
+          ondrop="onApiCollectionDrop(event)">
+          <input type="file" id="api-collection-file-input" accept=".json" onchange="onApiCollectionFileSelect(this)">
+          <div class="dz-icon">🔌</div>
+          <h3 data-i18n="drop_api_collection_title">اسحب ملف API JSON هنا أو اضغط للاختيار</h3>
+          <p>OpenAPI / Swagger / Postman .json</p>
+        </div>
+        <div class="status-msg" id="api-collection-status-msg"></div>
+      </div>
+
+      <button class="load-btn" id="generate-btn" onclick="generateFromSRS()" disabled data-i18n="generate_btn" style="margin-top:16px">✨ توليد حالات الاختبار</button>
       <div class="status-msg" id="srs-status-msg"></div>
       <p style="font-size:12px;color:#aaa;margin-top:8px" data-i18n="srs_note">ملاحظة: يعمل بشكل أفضل مع مستندات نصية وليست صوراً ممسوحة ضوئياً. التوليد يستخدم رصيد Anthropic API الخاص بك.</p>
     </div>
@@ -562,6 +619,7 @@ body::before{
       </div>
       <button class="btn" onclick="expandAll()" data-i18n="expand_all">فتح الكل</button>
       <button class="btn" onclick="collapseAll()" data-i18n="collapse_all">إغلاق الكل</button>
+      <button class="btn btn-save" id="save-project-btn" onclick="saveProjectFile()" data-i18n="save_project_btn">💾 حفظ المشروع</button>
       <button class="btn btn-csv" onclick="exportCSV()">CSV</button>
       <div class="pdd" id="pdd">
         <button class="btn btn-pdf" onclick="togglePDF()">PDF ▾</button>
@@ -867,6 +925,22 @@ const I18N = {
     drop_srs_title: 'اسحب ملف SRS هنا أو اضغط للاختيار',
     generate_btn: '✨ توليد حالات الاختبار',
     srs_note: 'ملاحظة: يعمل بشكل أفضل مع مستندات نصية وليست صوراً ممسوحة ضوئياً. التوليد يستخدم رصيد Anthropic API الخاص بك.',
+    api_collection_title: 'مجموعة API (اختياري)',
+    api_collection_desc: 'ارفع ملف OpenAPI/Swagger JSON أو مجموعة Postman لتوليد حالات اختبار API دقيقة تعتمد على المسارات الفعلية. اختياري — التوليد يعمل من SRS فقط بدونه.',
+    drop_api_collection_title: 'اسحب ملف API JSON هنا أو اضغط للاختيار',
+    api_collection_ready: 'ملف API جاهز',
+    api_collection_read_fail: 'فشل قراءة ملف API',
+    api_collection_unrecognized: 'تعذر التعرف على الملف كمواصفة OpenAPI/Swagger أو مجموعة Postman',
+    resume_project_title: '📁 استكمال مشروع محفوظ',
+    resume_project_desc: 'لديك ملف مشروع محفوظ (.qaproject.json)؟ ارفعه هنا لاستكمال الاختبار من حيث توقفت — بكل الحالات والملاحظات والمرفقات كما هي.',
+    drop_project_title: 'اسحب ملف المشروع هنا أو اضغط للاختيار',
+    resume_autosave_btn: 'استكمال',
+    dismiss_autosave_btn: 'تجاهل',
+    autosave_banner_prefix: '🔄 لديك جلسة سابقة غير محفوظة كملف — ',
+    autosave_banner_suffix: 'حالة مكتملة. استكمل قبل أن تُفقَد.',
+    project_load_fail_prefix: 'فشل تحميل ملف المشروع: ',
+    save_project_btn: '💾 حفظ المشروع',
+    save_project_done: '✓ تم الحفظ',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1025,6 +1099,22 @@ const I18N = {
     drop_srs_title: 'Drag an SRS file here or click to choose',
     generate_btn: '✨ Generate Test Cases',
     srs_note: 'Note: works best with text documents rather than scanned images. Generation uses your own Anthropic API credit.',
+    api_collection_title: 'API Collection (optional)',
+    api_collection_desc: 'Upload an OpenAPI/Swagger JSON file or a Postman collection export to generate precise API test cases based on real endpoints. Optional — generation still works from the SRS alone without it.',
+    drop_api_collection_title: 'Drag an API collection JSON file here or click to choose',
+    api_collection_ready: 'API file ready',
+    api_collection_read_fail: 'Failed to read the API file',
+    api_collection_unrecognized: 'Could not recognize the file as an OpenAPI/Swagger spec or a Postman collection',
+    resume_project_title: '📁 Resume a Saved Project',
+    resume_project_desc: 'Have a saved project file (.qaproject.json)? Drop it here to pick up exactly where you left off — every status, note, and attachment intact.',
+    drop_project_title: 'Drag a project file here or click to choose',
+    resume_autosave_btn: 'Resume',
+    dismiss_autosave_btn: 'Dismiss',
+    autosave_banner_prefix: '🔄 You have an unsaved previous session — ',
+    autosave_banner_suffix: 'cases completed. Resume before it\'s lost.',
+    project_load_fail_prefix: 'Failed to load project file: ',
+    save_project_btn: '💾 Save Project',
+    save_project_done: '✓ Saved',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1193,11 +1283,13 @@ let TCS = [], R = {}, CF = 'all', PROJ = '', SEC_MAP = {};
 let _pendingFile = null;
 let CLAUDE_KEY = localStorage.getItem('qa_claude_key') || '';
 let _pendingSrsFile = null;
+let _pendingApiCollectionFile = null;
 let ACTIVE_PLATFORMS = [];
 
 const PLATFORM_DEFS = [
   { key:'frontend',      label:'Front-end',      emoji:'🖥️', match:['frontend','front-end'] },
-  { key:'backend',       label:'Back-end',       emoji:'⚙️', match:['backend','back-end','api'] },
+  { key:'backend',       label:'Back-end',       emoji:'⚙️', match:['backend','back-end'] },
+  { key:'api',           label:'API',            emoji:'🔌', match:['api'] },
   { key:'cms',           label:'CMS',            emoji:'🗂️', match:['cms'] },
   { key:'dashboard',     label:'Dashboard',      emoji:'📊', match:['dashboard'] },
   { key:'android',       label:'Android',        emoji:'🤖', match:['android'] },
@@ -1469,6 +1561,7 @@ function updateStatus(selectEl) {
     const actualField = card.querySelector('.actual-field');
     if (actualField) actualField.style.display = newStatus === 'fail' ? 'block' : 'none';
     renderStats(); // Re-render only stats to reflect changes
+    autosaveProject();
   }
 }
 
@@ -1478,6 +1571,7 @@ function updateExecutionField(inputEl, field) {
   const tc = TCS.find(c => c.id === tcId);
   if (tc) {
     tc[field] = value;
+    autosaveProject();
   }
 }
 
@@ -1692,7 +1786,142 @@ async function extractSrsText(file) {
   throw new Error(t('srs_unsupported_type'));
 }
 
-function buildApiPrompt(platformDefs, srsText) {
+// ── API collection upload (optional, logged-in path) ────────────────────────
+function onApiCollectionDrag(e, on) {
+  e.preventDefault();
+  document.getElementById('api-collection-drop-zone').classList.toggle('drag', on);
+}
+function onApiCollectionDrop(e) {
+  e.preventDefault();
+  document.getElementById('api-collection-drop-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) prepareApiCollectionFile(f);
+}
+function onApiCollectionFileSelect(inp) { if (inp.files[0]) prepareApiCollectionFile(inp.files[0]); }
+function prepareApiCollectionFile(file) {
+  if (!/\.json$/i.test(file.name)) {
+    showApiCollectionStatus(t('json_only_error'), true);
+    return;
+  }
+  _pendingApiCollectionFile = file;
+  document.getElementById('api-collection-fp-name').textContent = file.name;
+  document.getElementById('api-collection-fp-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+  document.getElementById('api-collection-file-prev').style.display = 'flex';
+  document.getElementById('api-collection-drop-zone').style.display = 'none';
+  showApiCollectionStatus(t('api_collection_ready'));
+}
+function clearApiCollectionFile() {
+  _pendingApiCollectionFile = null;
+  document.getElementById('api-collection-file-prev').style.display = 'none';
+  document.getElementById('api-collection-drop-zone').style.display = 'block';
+  document.getElementById('api-collection-file-input').value = '';
+  showApiCollectionStatus('');
+}
+function showApiCollectionStatus(msg, isError = false) {
+  const el = document.getElementById('api-collection-status-msg');
+  if (el) { el.textContent = msg; el.classList.toggle('err', isError); }
+}
+
+// Resolves a $ref (or inline schema) against the OpenAPI components.schemas map and
+// returns its field names. Strapi wraps request fields under properties.data.properties
+// with a sibling data.required array, so that shape is preferred when present.
+function resolveSchemaFields(schemas, schemaObj) {
+  if (!schemaObj) return null;
+  if (schemaObj.$ref) {
+    const name = schemaObj.$ref.split('/').pop();
+    schemaObj = schemas[name];
+    if (!schemaObj) return null;
+  }
+  const dataSchema = schemaObj.properties && schemaObj.properties.data;
+  const target = (dataSchema && dataSchema.properties) ? dataSchema : schemaObj;
+  if (!target || !target.properties) return null;
+  const required = new Set(target.required || []);
+  return Object.keys(target.properties).map(k => required.has(k) ? `${k}*` : k);
+}
+
+function summarizeOpenApi(spec) {
+  const schemas = (spec.components && spec.components.schemas) || {};
+  const lines = [];
+  const paths = spec.paths || {};
+  Object.keys(paths).forEach(path => {
+    const methods = paths[path];
+    Object.keys(methods).forEach(method => {
+      if (!/^(get|post|put|patch|delete)$/i.test(method)) return;
+      const detail = methods[method];
+      const head = detail.summary ? `${method.toUpperCase()} ${path} — ${detail.summary}` : `${method.toUpperCase()} ${path}`;
+      lines.push(head);
+
+      const params = detail.parameters || [];
+      const pathParams = params.filter(p => p.in === 'path').map(p => p.name);
+      const queryParams = params.filter(p => p.in === 'query').map(p => p.name);
+      if (pathParams.length) lines.push(`  path params: ${pathParams.join(', ')}`);
+      if (queryParams.length) lines.push(`  query params: ${queryParams.join(', ')}`);
+
+      const rb = detail.requestBody;
+      if (rb) {
+        const content = rb.content && rb.content['application/json'];
+        const fields = content && resolveSchemaFields(schemas, content.schema);
+        lines.push(`  requestBody${rb.required ? ' (required)' : ''}: ${fields && fields.length ? fields.join(', ') : 'see spec'}`);
+      }
+
+      const responses = Object.keys(detail.responses || {});
+      if (responses.length) lines.push(`  responses: ${responses.join(', ')}`);
+    });
+  });
+  return lines.join('\n');
+}
+
+function summarizePostman(collection) {
+  const lines = [];
+  function walk(items, prefix) {
+    (items || []).forEach(it => {
+      if (Array.isArray(it.item)) {
+        walk(it.item, prefix + it.name + ' / ');
+      } else if (it.request) {
+        const req = it.request;
+        const method = (req.method || 'GET').toUpperCase();
+        const url = typeof req.url === 'string' ? req.url : ((req.url && req.url.raw) || '');
+        lines.push(`${method} ${url} — ${prefix}${it.name}`);
+        if (req.body && req.body.mode === 'raw' && req.body.raw) {
+          try {
+            const parsed = JSON.parse(req.body.raw);
+            if (parsed && typeof parsed === 'object') lines.push(`  body fields: ${Object.keys(parsed).join(', ')}`);
+          } catch (e) { /* non-JSON body, skip */ }
+        }
+      }
+    });
+  }
+  walk(collection.item, '');
+  return lines.join('\n');
+}
+
+async function extractApiCollectionText(file) {
+  const raw = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = e => resolve(e.target.result);
+    r.onerror = () => reject(new Error(t('api_collection_read_fail')));
+    r.readAsText(file, 'UTF-8');
+  });
+
+  let data;
+  try { data = JSON.parse(raw); }
+  catch (e) { throw new Error(t('api_collection_unrecognized')); }
+
+  let out;
+  if (data && data.paths && (data.openapi || data.swagger)) {
+    out = summarizeOpenApi(data);
+  } else if (data && Array.isArray(data.item)) {
+    out = summarizePostman(data);
+  } else {
+    throw new Error(t('api_collection_unrecognized'));
+  }
+
+  if (!out || !out.trim()) throw new Error(t('api_collection_unrecognized'));
+  const MAX_CHARS = 45000;
+  return out.length > MAX_CHARS ? (out.slice(0, MAX_CHARS) + '\n...(truncated — collection too large, showing first portion)') : out;
+}
+
+function buildApiPrompt(platformDefs, srsText, apiCollectionText) {
   const platformList = platformDefs.map(d => `- "${platLabel(d)}"`).join('\n');
   const platformNames = platformDefs.map(d => platLabel(d)).join(', ');
   const rule1 = LANG === 'en'
@@ -1744,9 +1973,14 @@ Rules:
 7. Expected result must be highly specific — never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states
 8. ${rule8}
 9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)
+10. Also include non-functional test cases regardless of whether the spec mentions them: page performance under normal/peak load (target <3s, degrade gracefully on throttled connections), basic SEO (titles/meta tags, canonical URLs, sitemap entries, redirect correctness), cookie-consent/privacy-notice banner and personal-data handling, responsive layout on foldable devices in addition to desktop/tablet/mobile, and accessibility captions/transcripts for any audio/video content${apiCollectionText ? '' : '.'}${apiCollectionText ? `
+11. An API collection (real endpoint definitions) is provided below after the feature spec. For each relevant endpoint, add dedicated API-level test cases referencing the exact method, path, and field names given (never invent endpoints not listed): a successful request with valid data, required-field/validation errors, unauthorized/forbidden access where auth applies, not-found for invalid IDs, and rate-limit/server-error handling where relevant. Tag every one of these with platform: "API" (not "Back-end") so they are distinguishable as collection-derived endpoint tests. These are in addition to, not a replacement for, the SRS-based test cases.` : ''}
 
 Feature spec:
-${srsText}`;
+${srsText}${apiCollectionText ? `
+
+API Collection (real endpoint definitions — use for precise API-level test cases):
+${apiCollectionText}` : ''}`;
 }
 
 function parseClaudeJSON(text, stopReason) {
@@ -1810,9 +2044,15 @@ async function generateFromSRS() {
   catch (e) { hideOverlay(); showSrsStatus(t('srs_extract_fail_prefix') + e.message, true); return; }
   if (!srsText || !srsText.trim()) { hideOverlay(); showSrsStatus(t('srs_no_text'), true); return; }
 
+  let apiCollectionText = '';
+  if (_pendingApiCollectionFile) {
+    try { apiCollectionText = await extractApiCollectionText(_pendingApiCollectionFile); }
+    catch (e) { hideOverlay(); showApiCollectionStatus(e.message, true); return; }
+  }
+
   showOverlay(t('srs_generating'), t('srs_generating_sub'));
   try {
-    const prompt = buildApiPrompt(platforms, srsText);
+    const prompt = buildApiPrompt(platforms, srsText, apiCollectionText);
     const data = await callClaudeAPI(prompt);
     hideOverlay();
     validateAndBuild(data);
@@ -1882,7 +2122,7 @@ function buildManualPrompt(lang) {
     ? ('Do not stop at a minimum — generate as many test cases as the spec can genuinely support, aiming for exhaustive, comprehensive coverage across ' + platformNames + ' (roughly 800-1000 test cases for a reasonably detailed spec). Only stop once every happy path, validation rule, error state, and edge case you can identify has its own case.')
     : ('Minimum ' + tcCount + ' test cases, aim for complete coverage across ' + platformNames);
 
-  return 'You are a senior QA engineer. Read the SRS/feature spec below and generate a comprehensive test case list.\n\nCreate a FILE called test_cases.json and write ONLY a valid JSON object into it \u2014 no markdown, no backticks, no explanation before or after the file.\n\nJSON format:\n{\n  "feature": "Feature name here",\n  "platform": "Frontend & CMS & API",\n  "generated": "YYYY-MM-DD",\n  "sections": [\n    {\n      "name": "Section name",\n      "cases": [\n        {\n          "id": "TC-001",\n          "title": "Short descriptive title",\n          "priority": "P1",\n          "category": "Explicit",\n          "platform": "Frontend",\n          "pre": "Precondition text",\n          "steps": "1. Step one\\n2. Step two\\n3. Step three",\n          "exp": "Expected result \u2014 be specific, name the API endpoint, parameter, CMS state, or UI element",\n          "environment": "e.g. Android 14, Pixel 8 / Chrome 128, Staging API (optional)"\n        }\n      ]\n    }\n  ]\n}\n\nPlatform values to use (cover ALL of these that apply):\n' + platformList + '\n\nRules:\n1. ' + rule1 + '\n2. Keep API endpoints, parameters, system roles, and technical terms in English (e.g. GET /api/verify, is_active = 1, Publisher, RTL/LTR)\n3. priority: P1 = critical flow/security, P2 = important feature, P3 = edge cases/nice-to-have\n4. category: "Explicit" if it comes directly from the spec, "Implicit" if it is a standard web/system expectation beyond the spec\n5. Cover ALL of these for EACH platform mentioned in the spec:\n   a. Happy path \u2014 main success flows (submitting forms, publishing content, successful API calls)\n   b. Validation \u2014 empty fields, incorrect formats, boundary values, XSS/SQL injection prevention\n   c. Error states \u2014 API errors, network loss, server 500, timeout, rate limit reached\n   d. UI states \u2014 loading spinners, empty states, success/error messages, RTL/LTR layout\n   e. Implicit Web \u2014 browser refresh mid-flow, browser back/forward, session expiry, multi-tab behavior\n   f. Frontend Specifics (if applicable) \u2014 responsive (Desktop, Tablet, Mobile Web), cross-browser (Chrome, Safari, Edge, Firefox), WCAG 2.2 AAA\n   g. CMS Specifics (if applicable) \u2014 concurrent editing conflicts, RBAC restrictions, multi-stage workflow transitions, audit logs\n   h. Mobile Specifics (if applicable, Android/iOS) \u2014 OS version fragmentation, permissions, offline behavior, push notifications, app backgrounding\n   i. Security Specifics (if applicable) \u2014 authN/authZ boundaries, injection/XSS prevention, rate limiting, session handling\n   j. Accessibility Specifics (if applicable) \u2014 screen reader support, keyboard navigation, color contrast, WCAG 2.2 AAA\n   k. Business rules \u2014 each specific rule in the spec becomes a separate test case\n   l. UAT / End-to-End Scenarios \u2014 realistic, multi-step journeys written from the real end users perspective (not a single technical step), validating a complete business outcome, spanning multiple platforms/sections where relevant (e.g. an editor creates and publishes content in the CMS, then a visitor sees it live on the Frontend; or a customer places an order via the Frontend and support staff process it via the Dashboard)\n6. Steps must be numbered, one per line using \\n\n7. Expected result must be highly specific \u2014 never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states\n8. ' + rule8 + '\n9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)\n\nFeature spec:\n[PASTE YOUR SRS HERE]';
+  return 'You are a senior QA engineer. Read the SRS/feature spec below and generate a comprehensive test case list.\n\nCreate a FILE called test_cases.json and write ONLY a valid JSON object into it \u2014 no markdown, no backticks, no explanation before or after the file.\n\nJSON format:\n{\n  "feature": "Feature name here",\n  "platform": "Frontend & CMS & API",\n  "generated": "YYYY-MM-DD",\n  "sections": [\n    {\n      "name": "Section name",\n      "cases": [\n        {\n          "id": "TC-001",\n          "title": "Short descriptive title",\n          "priority": "P1",\n          "category": "Explicit",\n          "platform": "Frontend",\n          "pre": "Precondition text",\n          "steps": "1. Step one\\n2. Step two\\n3. Step three",\n          "exp": "Expected result \u2014 be specific, name the API endpoint, parameter, CMS state, or UI element",\n          "environment": "e.g. Android 14, Pixel 8 / Chrome 128, Staging API (optional)"\n        }\n      ]\n    }\n  ]\n}\n\nPlatform values to use (cover ALL of these that apply):\n' + platformList + '\n\nRules:\n1. ' + rule1 + '\n2. Keep API endpoints, parameters, system roles, and technical terms in English (e.g. GET /api/verify, is_active = 1, Publisher, RTL/LTR)\n3. priority: P1 = critical flow/security, P2 = important feature, P3 = edge cases/nice-to-have\n4. category: "Explicit" if it comes directly from the spec, "Implicit" if it is a standard web/system expectation beyond the spec\n5. Cover ALL of these for EACH platform mentioned in the spec:\n   a. Happy path \u2014 main success flows (submitting forms, publishing content, successful API calls)\n   b. Validation \u2014 empty fields, incorrect formats, boundary values, XSS/SQL injection prevention\n   c. Error states \u2014 API errors, network loss, server 500, timeout, rate limit reached\n   d. UI states \u2014 loading spinners, empty states, success/error messages, RTL/LTR layout\n   e. Implicit Web \u2014 browser refresh mid-flow, browser back/forward, session expiry, multi-tab behavior\n   f. Frontend Specifics (if applicable) \u2014 responsive (Desktop, Tablet, Mobile Web), cross-browser (Chrome, Safari, Edge, Firefox), WCAG 2.2 AAA\n   g. CMS Specifics (if applicable) \u2014 concurrent editing conflicts, RBAC restrictions, multi-stage workflow transitions, audit logs\n   h. Mobile Specifics (if applicable, Android/iOS) \u2014 OS version fragmentation, permissions, offline behavior, push notifications, app backgrounding\n   i. Security Specifics (if applicable) \u2014 authN/authZ boundaries, injection/XSS prevention, rate limiting, session handling\n   j. Accessibility Specifics (if applicable) \u2014 screen reader support, keyboard navigation, color contrast, WCAG 2.2 AAA\n   k. Business rules \u2014 each specific rule in the spec becomes a separate test case\n   l. UAT / End-to-End Scenarios \u2014 realistic, multi-step journeys written from the real end users perspective (not a single technical step), validating a complete business outcome, spanning multiple platforms/sections where relevant (e.g. an editor creates and publishes content in the CMS, then a visitor sees it live on the Frontend; or a customer places an order via the Frontend and support staff process it via the Dashboard)\n   m. Non-functional baseline — test these regardless of whether the spec mentions them: page performance under normal/peak load (target <3s, graceful behavior on throttled connections), basic SEO (page titles/meta tags, canonical URLs, sitemap entries, redirect correctness), cookie-consent/privacy-notice banner and personal-data handling, responsive layout on foldable devices in addition to desktop/tablet/mobile, and accessibility captions/transcripts for any audio/video content\n6. Steps must be numbered, one per line using \\n\n7. Expected result must be highly specific \u2014 never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states\n8. ' + rule8 + '\n9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)\n10. If the API Collection section below contains real content (not the placeholder), use it to generate precise API-level test cases referencing the exact method, path, and field names given (never invent endpoints not listed): successful requests, required-field/validation errors, unauthorized/forbidden access where auth applies, not-found for invalid IDs, and rate-limit/server-error handling where relevant — in addition to, not instead of, the SRS-based test cases. Tag every one of these with platform: "API" (not "Back-end") so they are distinguishable as collection-derived endpoint tests. If that section is empty or still the placeholder, ignore it entirely.\n\nFeature spec:\n[PASTE YOUR SRS HERE]\n\nOptional — API Collection (OpenAPI/Swagger JSON or Postman export): paste it below if you have one for this feature; otherwise delete this whole section.\n[PASTE YOUR API COLLECTION JSON HERE]';
 }
 
 // ── File handling ─────────────────────────────────────────────────────────────
@@ -2246,6 +2486,22 @@ function buildTracker(data) {
 
   document.getElementById('t-feat').textContent = PROJ;
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+  // Restore saved project state (tester/build/date/filter/attachments) when
+  // loading a .qaproject.json file (from autosave or an explicit import) —
+  // absent on a fresh Claude-generated/manually-imported test_cases.json.
+  const savedProject = data.qaTrackerProject;
+  if (savedProject && savedProject.meta) {
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    setVal('f-tester', savedProject.meta.tester);
+    setVal('f-build', savedProject.meta.build);
+    setVal('f-date', savedProject.meta.date);
+    if (savedProject.meta.activeFilter) CF = savedProject.meta.activeFilter;
+  }
+  if (savedProject && savedProject.attachments) {
+    driveFiles = savedProject.attachments;
+  }
+
   document.getElementById('upload-screen').style.display = 'none';
   document.getElementById('tracker-screen').style.display = 'block';
 
@@ -2262,6 +2518,141 @@ function buildTracker(data) {
 
   render(); // Render after initGoogleAuth has potentially set gUser
   showStatus('');
+  autosaveProject();
+}
+
+// ── Project save / resume — persist full progress (status, notes, actual
+// results, attachments) so a session can be picked back up later, either
+// automatically (localStorage autosave) or via an explicit exported file. ──
+const AUTOSAVE_KEY = 'qa_autosave_project';
+let _resumableProject = null;
+
+function serializeProject() {
+  const bySec = [];
+  const secIndex = {};
+  TCS.forEach(tc => {
+    if (!(tc.sec in secIndex)) {
+      secIndex[tc.sec] = bySec.length;
+      bySec.push({ name: tc.sec, color: tc.sc, cases: [] });
+    }
+    const { sec, sc, ...rest } = tc; // sec/sc are re-derived from the section wrapper on load
+    bySec[secIndex[tc.sec]].cases.push(rest);
+  });
+  return {
+    feature: PROJ,
+    platform: (typeof ACTIVE_PLATFORMS !== 'undefined' ? ACTIVE_PLATFORMS.join(' & ') : ''),
+    generated: new Date().toISOString().split('T')[0],
+    sections: bySec,
+    qaTrackerProject: {
+      formatVersion: 1,
+      savedAt: new Date().toISOString(),
+      meta: {
+        tester: document.getElementById('f-tester')?.value || '',
+        build: document.getElementById('f-build')?.value || '',
+        date: document.getElementById('f-date')?.value || '',
+        activeFilter: CF,
+      },
+      attachments: driveFiles,
+    },
+  };
+}
+
+function autosaveProject() {
+  if (!TCS.length) return;
+  try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeProject())); }
+  catch (e) { /* storage full/unavailable — autosave is a convenience, not critical */ }
+}
+
+function saveProjectFile() {
+  const data = serializeProject();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const slug = (PROJ || 'qa-project').toLowerCase()
+    .replace(/[^a-z0-9؀-ۿ]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'qa-project';
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${slug}_${new Date().toISOString().split('T')[0]}.qaproject.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  const btn = document.getElementById('save-project-btn');
+  if (btn) {
+    const original = btn.textContent;
+    btn.textContent = t('save_project_done');
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  }
+}
+
+function projectProgress(data) {
+  let total = 0, done = 0;
+  (data.sections || []).forEach(s => (s.cases || []).forEach(c => {
+    total++;
+    if (c.status && c.status !== 'pending') done++;
+  }));
+  return { total, done };
+}
+
+function checkForResumableProject() {
+  const raw = localStorage.getItem(AUTOSAVE_KEY);
+  if (!raw) return;
+  let data;
+  try { data = JSON.parse(raw); } catch (e) { localStorage.removeItem(AUTOSAVE_KEY); return; }
+  if (!data || !Array.isArray(data.sections) || !data.sections.length) { localStorage.removeItem(AUTOSAVE_KEY); return; }
+
+  const { total, done } = projectProgress(data);
+  const banner = document.getElementById('autosave-banner');
+  const text = document.getElementById('autosave-banner-text');
+  if (!banner || !text) return;
+  text.textContent = t('autosave_banner_prefix') + `${done}/${total} ` + t('autosave_banner_suffix');
+  banner.style.display = 'flex';
+  _resumableProject = data;
+}
+
+function resumeAutosave() {
+  if (!_resumableProject) return;
+  buildTracker(_resumableProject);
+  document.getElementById('autosave-banner').style.display = 'none';
+}
+
+function dismissAutosave() {
+  localStorage.removeItem(AUTOSAVE_KEY);
+  const banner = document.getElementById('autosave-banner');
+  if (banner) banner.style.display = 'none';
+  _resumableProject = null;
+}
+
+function onProjectDrag(e, on) {
+  e.preventDefault();
+  document.getElementById('project-drop-zone').classList.toggle('drag', on);
+}
+function onProjectDrop(e) {
+  e.preventDefault();
+  document.getElementById('project-drop-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) loadProjectFile(f);
+}
+function onProjectFileSelect(inp) { if (inp.files[0]) loadProjectFile(inp.files[0]); }
+
+function showProjectStatus(msg, isError = false) {
+  const el = document.getElementById('project-status-msg');
+  if (el) { el.textContent = msg; el.classList.toggle('err', isError); }
+}
+
+async function loadProjectFile(file) {
+  if (!/\.json$/i.test(file.name)) { showProjectStatus(t('json_only_error'), true); return; }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data.sections || !Array.isArray(data.sections) || !data.sections.length) {
+      showProjectStatus(t('no_test_case_json'), true);
+      return;
+    }
+    buildTracker(data);
+  } catch (e) {
+    showProjectStatus(t('project_load_fail_prefix') + e.message, true);
+  }
 }
 
 // ── Google Auth & Drive ───────────────────────────────────────────────────────
@@ -2491,6 +2882,7 @@ async function handleUpload(tcId, input) {
     prog.textContent = `${t('drive_upload_done_prefix')}${uploaded}${t('drive_upload_done_suffix')}`;
     setTimeout(() => { prog.textContent = ''; }, 3000);
     renderFileChips(tcId);
+    autosaveProject();
   } catch(e) {
     prog.textContent = t('drive_error_prefix') + e.message;
   } finally {
@@ -2515,6 +2907,7 @@ function removeFile(tcId, idx) {
   if (!driveFiles[tcId]) return;
   driveFiles[tcId].splice(idx, 1);
   renderFileChips(tcId);
+  autosaveProject();
 }
 
 // Re-render file chips after render() rebuilds DOM
@@ -2602,6 +2995,7 @@ function saveNewCase() {
   }
 
   TCS.push(newTC);
+  autosaveProject();
 
   // Close & reset
   document.getElementById('add-case-card').classList.remove('open');
@@ -2652,6 +3046,7 @@ window.addEventListener('load', () => {
   if (window.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   }
+  checkForResumableProject();
 });
 </script>
 <span style="font-family:'Amiri';font-size:0;position:absolute;opacity:0" aria-hidden="true">أ</span>

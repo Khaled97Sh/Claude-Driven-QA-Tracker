@@ -12,8 +12,10 @@ No build step, no server, no database. Everything runs from one HTML file, opene
 - **Two ways to get test cases in:**
   - **Manual JSON import** — copy a ready-made prompt into Claude.ai (or any AI assistant), paste in your SRS, save the JSON it returns, and drop it in. Works completely offline once loaded, no API key required.
   - **Automated generation** — sign in with your own Anthropic API key and upload an SRS document (`.txt`, `.md`, `.pdf`, or `.docx`) directly. The app calls the Claude API and builds your test-case tracker for you, no manual copy-paste needed.
-- **Platform-aware filtering** — tag a project with the platforms it covers (Front-end, Back-end, CMS, Dashboard, Android, iOS, Security, Accessibility) and get matching filter tabs automatically.
+- **Platform-aware filtering** — tag a project with the platforms it covers (Front-end, Back-end, API, CMS, Dashboard, Android, iOS, Security, Accessibility) and get matching filter tabs automatically.
+- **Optional API collection input** — alongside the SRS, feed in an OpenAPI/Swagger JSON export or a Postman collection to generate precise, endpoint-accurate API test cases (real methods, paths, required fields, and status codes), tagged under their own dedicated **API** tab so they're easy to review separately from general backend cases. Works in both the manual-prompt and automated-generation flows, and is fully optional — everything still works from the SRS alone without one.
 - **Full execution tracking per test case** — status (pending / pass / fail / blocked / skip), device/OS, environment, notes, and an "Actual Result" field that only appears once a case is marked failed.
+- **Save & resume progress** — never lose a testing session. The tracker autosaves your progress (statuses, notes, actual results, attachments) to your browser as you work, and offers to resume it next time you open the app. For backup or moving to another machine, hit **💾 Save Project** any time to export everything as a `.qaproject.json` file, and drop it back into the **📁 Resume a Saved Project** box on the home screen to pick up exactly where you left off.
 - **Google Drive attachments** — optionally sign in with Google to attach documentation/evidence files to individual test cases.
 - **Manual case authoring** — add ad-hoc test cases straight from the tracker screen, without touching the source JSON.
 - **Polished exports:**
@@ -83,7 +85,7 @@ This downloads the bundled Python runtimes for each platform and produces both i
 
 ### Option A — Manual JSON import (no API key needed)
 1. On the home screen, check the platforms this project covers.
-2. Copy the **Claude Prompt** shown on screen, paste it into Claude.ai (or another AI chat) along with your SRS/feature spec.
+2. Copy the **Claude Prompt** shown on screen, paste it into Claude.ai (or another AI chat) along with your SRS/feature spec. The prompt also has an optional slot for an API collection (OpenAPI/Swagger JSON or Postman export) — paste one in if you have it for more precise API test cases, or delete that section if you don't.
 3. Save the JSON it returns as `test_cases.json`.
 4. Drag the file onto the drop zone (or click to browse) and hit **Load Test Cases**.
 
@@ -91,7 +93,8 @@ This downloads the bundled Python runtimes for each platform and produces both i
 1. Click **Sign in with Claude**, paste an Anthropic API key ([get one here](https://console.anthropic.com/settings/keys)), and save.
 2. Check the platforms this project covers.
 3. Upload your SRS document (`.txt`, `.md`, `.pdf`, or `.docx`).
-4. Click **Generate Test Cases** — Claude builds the tracker for you directly, no manual file handling.
+4. Optionally, also upload an **API collection** — an OpenAPI/Swagger JSON export or a Postman collection — so Claude can generate precise API test cases from your real endpoints, methods, and fields instead of guessing them from prose. Fully optional; generation works the same without it.
+5. Click **Generate Test Cases** — Claude builds the tracker for you directly, no manual file handling.
 
 From there, both paths land on the same tracker screen: expand a case, set its status, fill in execution details, attach files, and export a PDF or CSV whenever you like.
 
@@ -101,6 +104,7 @@ From there, both paths land on the same tracker screen: expand a case, set its s
 
 - **Anthropic API key** (only needed for automated generation) is stored **only in your own browser's `localStorage`** — it is never sent anywhere except directly to `api.anthropic.com`, and the app itself has no backend to intercept it.
 - **Google sign-in** (only needed for Drive file attachments) uses Google's own OAuth token flow; the token is kept in `sessionStorage` and cleared when the tab session ends.
+- **Project autosave** also lives only in your browser's `localStorage` — tied to this browser on this machine, cleared if you clear site data. Export a `.qaproject.json` file (**💾 Save Project**) whenever you want a durable backup or need to continue on a different machine/browser.
 - There is no server, no database, no analytics, and no data ever leaves your machine except the two API calls above, which you explicitly trigger.
 
 ---
