@@ -331,6 +331,10 @@ body.select-mode .tc-select{display:inline-flex}
 .api-request-line{font-family:monospace;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px 9px;direction:ltr}
 .api-run-locked{font-size:11.5px;color:var(--text-muted);cursor:help}
 .api-last-run{font-size:11px;color:var(--text-muted)}
+.api-response-status{font-size:13px;padding:8px 12px;border-radius:8px;margin-bottom:10px;direction:ltr;text-align:start}
+.api-response-status.ok{background:var(--status-pass-bg);color:var(--status-pass)}
+.api-response-status.bad{background:var(--status-fail-bg);color:var(--status-fail)}
+.api-response-raw{font-family:monospace;font-size:12px;line-height:1.6;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;max-height:340px;overflow:auto;direction:ltr;text-align:start;white-space:pre-wrap;word-break:break-word;margin:0}
 
 /* Upload */
 .upload-section{margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)}
@@ -1096,6 +1100,8 @@ const I18N = {
     api_expected_label: 'المتوقع:',
     api_body_contains_ok: 'محتوى الاستجابة مطابق للمتوقع',
     api_body_contains_fail_prefix: 'محتوى الاستجابة لا يحتوي على: ',
+    api_run_view_btn: 'تشغيل وعرض',
+    api_run_view_title: 'تشغيل وعرض الاستجابة الكاملة في نافذة',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1346,6 +1352,8 @@ const I18N = {
     api_expected_label: 'expected:',
     api_body_contains_ok: 'response body matches expected content',
     api_body_contains_fail_prefix: 'response body is missing: ',
+    api_run_view_btn: 'Run + View',
+    api_run_view_title: 'Run and show the full response in a dialog',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1512,6 +1520,10 @@ function setLanguage(lang) {
 
 let TCS = [], R = {}, CF = 'all', PROJ = '', SEC_MAP = {};
 let SEARCH_Q = '';
+// Which cards are expanded — tracked explicitly (not just a DOM class) so a
+// re-render (e.g. after Send to ClickUp or an API test run) doesn't silently
+// collapse the very card the user is looking at.
+let EXPANDED_IDS = new Set();
 let SELECT_MODE = false;
 let SELECTED_IDS = new Set();
 // ClickUp is optional and session-scoped (sessionStorage, not localStorage) —
@@ -1689,9 +1701,9 @@ function render() {
             </div>
           </div>
           <span class="badge" style="background:${statusBg};color:${statusColor}">${statusText}</span>
-          <span class="chev">▼</span>
+          <span class="chev${EXPANDED_IDS.has(tc.id) ? ' open' : ''}">▼</span>
         </div>
-        <div class="tc-body">
+        <div class="tc-body${EXPANDED_IDS.has(tc.id) ? ' open' : ''}">
           <div class="row">
             <div class="rlbl">${t('row_platform')}</div>
             <div class="rval">${esc(platStr)}</div>
@@ -1715,7 +1727,8 @@ function render() {
               <code class="api-request-line">${esc((tc.apiRequest.method || 'GET').toUpperCase())} ${esc(tc.apiRequest.path || '')}</code>
               ${isApiWriteMethod(tc.apiRequest.method) && !API_ALLOW_WRITES
                 ? `<span class="api-run-locked" data-i18n-title="api_writes_locked_title" title="${t('api_writes_locked_title')}">🔒 ${t('api_writes_locked')}</span>`
-                : `<button type="button" class="bug-action-btn" id="api-run-${esc(tc.id)}" onclick="runApiTest('${esc(tc.id)}')">▶ ${t('api_run_btn')}</button>`}
+                : `<button type="button" class="bug-action-btn" id="api-run-${esc(tc.id)}" onclick="runApiTest('${esc(tc.id)}')">▶ ${t('api_run_btn')}</button>
+                   <button type="button" class="bug-action-btn" id="api-run-view-${esc(tc.id)}" onclick="runApiTest('${esc(tc.id)}',{showDialog:true})" data-i18n-title="api_run_view_title" title="${t('api_run_view_title')}">🔍 ${t('api_run_view_btn')}</button>`}
               ${tc.apiLastRunAt ? `<span class="api-last-run">${t('api_last_run_prefix')} ${esc(new Date(tc.apiLastRunAt).toLocaleTimeString(LANG === 'en' ? 'en-US' : 'ar-EG'))}</span>` : ''}
             </div>
           </div>` : ''}
@@ -1821,6 +1834,9 @@ function toggleCase(headerEl) {
   const card = headerEl.closest('.tc-card');
   const body = card.querySelector('.tc-body');
   const chev = headerEl.querySelector('.chev');
+  const isOpening = !body.classList.contains('open');
+  const tcId = card.id.replace(/^tc-/, '');
+  if (isOpening) EXPANDED_IDS.add(tcId); else EXPANDED_IDS.delete(tcId);
   body.classList.toggle('open');
   chev.classList.toggle('open');
 }
@@ -1958,11 +1974,13 @@ function renderStats() {
 
 // ── Global Actions (Expand/Collapse All) ────────────────────────────────────
 function expandAll() {
+  TCS.forEach(tc => EXPANDED_IDS.add(tc.id));
   document.querySelectorAll('.tc-body').forEach(body => body.classList.add('open'));
   document.querySelectorAll('.tc-hdr .chev').forEach(chev => chev.classList.add('open'));
 }
 
 function collapseAll() {
+  EXPANDED_IDS.clear();
   document.querySelectorAll('.tc-body').forEach(body => body.classList.remove('open'));
   document.querySelectorAll('.tc-hdr .chev').forEach(chev => chev.classList.remove('open'));
 }
@@ -2476,7 +2494,8 @@ function buildApiRequestUrl(apiRequest) {
   return url;
 }
 
-async function runApiTest(tcId) {
+async function runApiTest(tcId, opts) {
+  const showDialog = !!(opts && opts.showDialog);
   const tc = TCS.find(c => c.id === tcId);
   if (!tc || !tc.apiRequest) return;
   if (!API_BASE_URL) {
@@ -2489,7 +2508,9 @@ async function runApiTest(tcId) {
     alert(t('api_writes_locked_alert'));
     return;
   }
-  const btn = document.getElementById('api-run-' + tcId);
+  // Both the quiet Run button and the Run+View button fire the exact same
+  // request — disable/relabel whichever one was actually clicked.
+  const btn = document.getElementById((showDialog ? 'api-run-view-' : 'api-run-') + tcId);
   if (btn) { btn.disabled = true; btn.textContent = t('api_running'); }
 
   const headers = { 'Content-Type': 'application/json' };
@@ -2513,24 +2534,74 @@ async function runApiTest(tcId) {
     tc.apiLastRunAt = Date.now();
     autosaveProject();
     render();
+    if (showDialog) {
+      openApiResponseModal(tc, { passed: false, networkError: e.message || '' });
+    }
     return;
   }
 
   const expectedStatuses = (tc.apiExpect && tc.apiExpect.status) || [];
   const statusOk = !expectedStatuses.length || expectedStatuses.includes(resp.status);
   const bodyContains = (tc.apiExpect && tc.apiExpect.bodyContains) || [];
-  const bodyOk = bodyContains.every(s => bodyText.includes(s));
+  const missingBodyParts = bodyContains.filter(s => !bodyText.includes(s));
+  const bodyOk = missingBodyParts.length === 0;
   const passed = statusOk && bodyOk;
 
   const truncatedBody = bodyText.length > 600 ? bodyText.slice(0, 600) + '…' : bodyText;
   tc.status = passed ? 'pass' : 'fail';
   tc.actual = `HTTP ${resp.status}` +
     (expectedStatuses.length ? ` (${t('api_expected_label')} ${expectedStatuses.join('/')})` : '') +
-    (bodyContains.length ? ` — ${bodyOk ? t('api_body_contains_ok') : t('api_body_contains_fail_prefix') + bodyContains.filter(s => !bodyText.includes(s)).join(', ')}` : '') +
+    (bodyContains.length ? ` — ${bodyOk ? t('api_body_contains_ok') : t('api_body_contains_fail_prefix') + missingBodyParts.join(', ')}` : '') +
     `\n${truncatedBody}`;
   tc.apiLastRunAt = Date.now();
   autosaveProject();
   render();
+
+  if (showDialog) {
+    openApiResponseModal(tc, {
+      passed, status: resp.status, expectedStatuses,
+      bodyContains, bodyOk, missingBodyParts, bodyText,
+    });
+  }
+}
+
+// ── Full response viewer (optional — the quiet ▶ Run button never opens this) ──
+function prettyPrintMaybeJson(text) {
+  try { return JSON.stringify(JSON.parse(text), null, 2); }
+  catch (e) { return text; }
+}
+
+function openApiResponseModal(tc, r) {
+  const modal = document.getElementById('api-response-modal');
+  const titleEl = document.getElementById('api-response-modal-title');
+  const bodyEl = document.getElementById('api-response-modal-body');
+  if (!modal || !titleEl || !bodyEl) return;
+
+  titleEl.textContent = `${r.passed ? '✓' : '✗'} ${tc.id} — ${r.passed ? t('stat_pass') : t('stat_fail')}`;
+
+  if (r.networkError) {
+    bodyEl.innerHTML = `<div class="api-response-status bad"><b>${esc(t('api_network_fail_prefix'))}</b>${esc(r.networkError)}</div>`;
+    modal.classList.add('open');
+    return;
+  }
+
+  const statusLine = `<div class="api-response-status ${r.expectedStatuses.length && !r.expectedStatuses.includes(r.status) ? 'bad' : 'ok'}">
+    <b>HTTP ${esc(r.status)}</b>${r.expectedStatuses.length ? ` (${esc(t('api_expected_label'))} ${esc(r.expectedStatuses.join('/'))})` : ''}
+  </div>`;
+  const bodyCheckLine = r.bodyContains.length ? `<div class="api-response-status ${r.bodyOk ? 'ok' : 'bad'}">
+    ${r.bodyOk ? esc(t('api_body_contains_ok')) : esc(t('api_body_contains_fail_prefix')) + esc(r.missingBodyParts.join(', '))}
+  </div>` : '';
+
+  bodyEl.innerHTML = `
+    ${statusLine}
+    ${bodyCheckLine}
+    <pre class="api-response-raw">${esc(prettyPrintMaybeJson(r.bodyText))}</pre>
+  `;
+  modal.classList.add('open');
+}
+function closeApiResponseModal() {
+  const modal = document.getElementById('api-response-modal');
+  if (modal) modal.classList.remove('open');
 }
 
 
@@ -4098,6 +4169,17 @@ window.addEventListener('load', () => {
         <button type="button" class="primary" onclick="saveApiSettings()" data-i18n="api_settings_save_btn">✓ حفظ</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══ API response viewer (opened only by the 🔍 Run + View button) ═══════════ -->
+<div class="modal-overlay" id="api-response-modal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-hdr">
+      <span id="api-response-modal-title">API Response</span>
+      <button type="button" onclick="closeApiResponseModal()" data-i18n-title="close_title" title="إغلاق">✕</button>
+    </div>
+    <div class="modal-body" id="api-response-modal-body"></div>
   </div>
 </div>
 </body>
