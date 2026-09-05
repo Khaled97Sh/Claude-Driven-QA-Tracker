@@ -283,6 +283,14 @@ body::before{
 .user-name{color:#e8e6e0;font-size:12px;font-family:Arial;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .logout-btn{background:none;border:none;color:#888;font-size:11px;cursor:pointer;font-family:Arial;padding:0}
 .logout-btn:hover{color:#fff}
+/* Bug-filing actions (Copy as Bug Report, Send to ClickUp) — shown only on Fail */
+.bug-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.bug-action-btn{font-size:12px;padding:6px 13px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-family:Arial;transition:all .15s}
+.bug-action-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.bug-action-btn.clickup-btn{border-color:#7b68ee;color:#7b68ee}
+.bug-action-btn.clickup-btn:hover{background:#7b68ee;color:#fff}
+.bug-action-btn.clickup-link{border-color:var(--status-pass);color:var(--status-pass)}
+
 /* Upload */
 .upload-section{margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)}
 .upload-btn{font-size:12px;padding:5px 12px;border-radius:10px;border:1px solid var(--accent);background:var(--status-pending-bg);color:var(--accent);cursor:pointer;font-family:Arial;transition:all .15s}
@@ -953,6 +961,9 @@ const I18N = {
     save_project_btn: '💾 حفظ المشروع',
     save_project_done: '✓ تم الحفظ',
     search_placeholder: '🔍 ابحث برقم الحالة أو العنوان أو الخطوات...',
+    copy_bug_btn: 'نسخ كتقرير خطأ',
+    copy_bug_done: 'تم النسخ',
+    bug_priority_label: 'الأولوية:',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1128,6 +1139,9 @@ const I18N = {
     save_project_btn: '💾 Save Project',
     save_project_done: '✓ Saved',
     search_placeholder: '🔍 Search by ID, title, or steps...',
+    copy_bug_btn: 'Copy as Bug Report',
+    copy_bug_done: 'Copied',
+    bug_priority_label: 'Priority:',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1492,6 +1506,9 @@ function render() {
             <div class="elbl" style="color:var(--status-fail)">${t('exec_actual')}</div>
             <textarea data-id="${esc(tc.id)}" onchange="updateExecutionField(this,'actual')">${esc(tc.actual || '')}</textarea>
           </div>
+          <div class="bug-actions" style="grid-column:1/span 2;${tc.status === 'fail' ? '' : 'display:none'}">
+            <button type="button" class="bug-action-btn" id="copy-bug-${esc(tc.id)}" onclick="copyAsBugReport('${esc(tc.id)}')">📋 ${t('copy_bug_btn')}</button>
+          </div>
           <div style="grid-column:1/span 2">
             <div class="elbl">${t('exec_notes')}</div>
             <textarea data-id="${esc(tc.id)}" onchange="updateExecutionField(this,'notes')">${esc(tc.notes || '')}</textarea>
@@ -1580,6 +1597,9 @@ function updateStatus(selectEl) {
     // Show/hide the "Actual Result" field — only relevant for failed cases
     const actualField = card.querySelector('.actual-field');
     if (actualField) actualField.style.display = newStatus === 'fail' ? 'block' : 'none';
+    // Show/hide bug-filing actions (Copy as Bug Report, Send to ClickUp) — same rule
+    const bugActions = card.querySelector('.bug-actions');
+    if (bugActions) bugActions.style.display = newStatus === 'fail' ? 'flex' : 'none';
     renderStats(); // Re-render only stats to reflect changes
     autosaveProject();
   }
@@ -1593,6 +1613,45 @@ function updateExecutionField(inputEl, field) {
     tc[field] = value;
     autosaveProject();
   }
+}
+
+// ── Bug report formatting (shared by "Copy as Bug Report" and "Send to ClickUp") ──
+function formatBugReport(tc) {
+  const lines = [];
+  lines.push(`## ${tc.title || ''} (${tc.id || ''})`);
+  lines.push('');
+  lines.push(`**${t('bug_priority_label')}** ${tc.priority || ''}`);
+  lines.push(`**${t('row_platform')}** ${tc.platform || ''}`);
+  if (tc.pre) lines.push(`**${t('row_pre')}** ${tc.pre}`);
+  lines.push('');
+  lines.push(`### ${t('row_steps')}`);
+  lines.push(tc.steps || '');
+  lines.push('');
+  lines.push(`### ${t('row_exp')}`);
+  lines.push(tc.exp || '');
+  lines.push('');
+  lines.push(`### ${t('exec_actual')}`);
+  lines.push(tc.actual || '');
+  if (tc.environment) { lines.push(''); lines.push(`**${t('exec_env')}** ${tc.environment}`); }
+  if (tc.device) { lines.push(''); lines.push(`**${t('exec_device')}** ${tc.device}`); }
+  if (tc.notes) { lines.push(''); lines.push(`**${t('exec_notes')}** ${tc.notes}`); }
+  return lines.join('\n');
+}
+
+function copyAsBugReport(tcId) {
+  const tc = TCS.find(c => c.id === tcId);
+  if (!tc) return;
+  const report = formatBugReport(tc);
+  navigator.clipboard.writeText(report).then(() => {
+    const btn = document.getElementById('copy-bug-' + tcId);
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = '✓ ' + t('copy_bug_done');
+      setTimeout(() => { btn.textContent = original; }, 2000);
+    }
+  }).catch(() => {
+    alert(t('copy_fail_alert'));
+  });
 }
 
 // ── Helper for rendering only stats (called by updateStatus) ──────────────────
