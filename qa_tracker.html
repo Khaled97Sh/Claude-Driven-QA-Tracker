@@ -311,6 +311,11 @@ body.select-mode .tc-select{display:inline-flex}
 .user-name{color:#e8e6e0;font-size:12px;font-family:Arial;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .logout-btn{background:none;border:none;color:#888;font-size:11px;cursor:pointer;font-family:Arial;padding:0}
 .logout-btn:hover{color:#fff}
+/* ClickUp connection chip/button — same dark-topbar look as the Google user-chip */
+.clickup-chip{display:flex;align-items:center;gap:8px;background:rgba(123,104,238,.18);border:1px solid rgba(123,104,238,.4);border-radius:20px;padding:4px 12px}
+.clickup-name{color:#e8e6e0;font-size:12px;font-family:Arial;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clickup-connect-btn{background:none;border:1px solid rgba(123,104,238,.5);color:#b3a6ff;font-size:12.5px;padding:5px 12px;border-radius:20px;cursor:pointer;font-family:Arial;white-space:nowrap}
+.clickup-connect-btn:hover{background:rgba(123,104,238,.15);color:#fff}
 /* Bug-filing actions (Copy as Bug Report, Send to ClickUp) — shown only on Fail */
 .bug-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
 .bug-action-btn{font-size:12px;padding:6px 13px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-family:Arial;transition:all .15s}
@@ -652,6 +657,12 @@ body.select-mode .tc-select{display:inline-flex}
       <span class="user-name" id="user-name"></span>
       <button class="logout-btn" onclick="signOut()" data-i18n-title="claude_logout_btn" title="تسجيل الخروج">✕</button>
     </div>
+    <div class="clickup-chip" id="clickup-chip" style="display:none;">
+      <span class="clickup-name" id="clickup-name"></span>
+      <button class="logout-btn" onclick="clickupChangeList()" data-i18n-title="clickup_change_list_title" title="تغيير القائمة">🔁</button>
+      <button class="logout-btn" onclick="clickupSignOut()" data-i18n-title="clickup_signout_title" title="فصل ClickUp">✕</button>
+    </div>
+    <button class="btn clickup-connect-btn" id="clickup-connect-btn" onclick="openClickUpLoginModal()" data-i18n="clickup_connect_btn_label">🔌 ربط ClickUp (اختياري)</button>
     <div class="tr">
       <div class="rf">
         <input id="f-tester" data-i18n-placeholder="f_tester_ph" placeholder="اسم المختبر" type="text">
@@ -1018,6 +1029,40 @@ const I18N = {
     spotcheck_invalid_count: 'أدخل عدداً صحيحاً أكبر من صفر',
     spotcheck_no_passed: 'لا توجد حالات ناجحة (Pass) لإعادة التحقق منها بعد',
     spotcheck_info_suffix: 'حالة عشوائية للمراجعة',
+    clickup_connect_btn_label: '🔌 ربط ClickUp (اختياري)',
+    clickup_change_list_title: 'تغيير القائمة',
+    clickup_signout_title: 'فصل ClickUp',
+    clickup_login_modal_title: '🔌 ربط ClickUp',
+    clickup_login_modal_desc: 'أدخل مفتاح API الشخصي الخاص بك من ClickUp. يُحفظ فقط لهذه الجلسة/التبويب الحالي (وليس بشكل دائم) — مفيد إن كان المتصفح مستخدَماً من أكثر من شخص.',
+    clickup_token_label: 'مفتاح API الشخصي',
+    clickup_help_btn: 'الحصول على المفتاح ↗',
+    clickup_connect_confirm_btn: 'ربط',
+    clickup_token_required: 'أدخل مفتاح API أولاً',
+    clickup_connecting: 'جارٍ الاتصال...',
+    clickup_connect_fail_prefix: 'تعذّر الاتصال: ',
+    clickup_cors_hint: 'تحقق من صحة المفتاح، أو قد يكون ClickUp يمنع الاتصال المباشر من المتصفح (CORS) — يمكنك استخدام "نسخ كتقرير خطأ" كبديل.',
+    clickup_unknown_user: 'مستخدم ClickUp',
+    clickup_list_modal_title: '📋 اختر قائمة ClickUp',
+    clickup_confirm_list_btn: '✓ تأكيد',
+    clickup_loading_lists: 'جارٍ تحميل القوائم من ClickUp...',
+    clickup_no_teams: 'لا يوجد أي مساحة عمل (Workspace) مرتبطة بهذا الحساب',
+    clickup_list_desc: 'اختر القائمة التي سيتم إضافة الأخطاء إليها، أو أنشئ قائمة جديدة.',
+    clickup_existing_list_label: 'قائمة موجودة',
+    clickup_choose_placeholder: '— اختر —',
+    clickup_create_list_toggle: 'إنشاء قائمة جديدة بدلاً من ذلك',
+    clickup_space_label: 'المساحة (Space)',
+    clickup_folder_label: 'المجلد (Folder)',
+    clickup_no_folder_option: 'بدون مجلد',
+    clickup_new_list_name_label: 'اسم القائمة الجديدة',
+    clickup_new_list_name_placeholder: 'مثال: أخطاء اختبار الغرفة',
+    clickup_create_list_btn: 'إنشاء القائمة',
+    clickup_creating: 'جارٍ الإنشاء...',
+    clickup_list_name_required: 'أدخل اسماً للقائمة الجديدة',
+    clickup_choose_list_required: 'اختر قائمة أو أنشئ واحدة قبل التأكيد',
+    clickup_view_btn: 'عرض في ClickUp',
+    clickup_send_btn: 'إرسال إلى ClickUp',
+    clickup_sending: 'جارٍ الإرسال...',
+    clickup_send_fail_prefix: 'فشل الإرسال: ',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1210,6 +1255,40 @@ const I18N = {
     spotcheck_invalid_count: 'Enter a whole number greater than zero',
     spotcheck_no_passed: 'No Passed cases available to re-verify yet',
     spotcheck_info_suffix: 'random cases to review',
+    clickup_connect_btn_label: '🔌 Connect ClickUp (optional)',
+    clickup_change_list_title: 'Change list',
+    clickup_signout_title: 'Disconnect ClickUp',
+    clickup_login_modal_title: '🔌 Connect ClickUp',
+    clickup_login_modal_desc: 'Enter your ClickUp personal API token. It\'s kept only for this session/tab (not permanently) — useful if this browser is shared by more than one person.',
+    clickup_token_label: 'Personal API token',
+    clickup_help_btn: 'Get your token ↗',
+    clickup_connect_confirm_btn: 'Connect',
+    clickup_token_required: 'Enter an API token first',
+    clickup_connecting: 'Connecting...',
+    clickup_connect_fail_prefix: 'Could not connect: ',
+    clickup_cors_hint: 'Double-check the token is correct — or ClickUp may be blocking a direct browser connection (CORS). "Copy as Bug Report" is a reliable fallback either way.',
+    clickup_unknown_user: 'ClickUp user',
+    clickup_list_modal_title: '📋 Choose a ClickUp list',
+    clickup_confirm_list_btn: '✓ Confirm',
+    clickup_loading_lists: 'Loading lists from ClickUp...',
+    clickup_no_teams: 'No workspace is associated with this account',
+    clickup_list_desc: 'Choose which list new bugs should be filed into, or create a new one.',
+    clickup_existing_list_label: 'Existing list',
+    clickup_choose_placeholder: '— Choose —',
+    clickup_create_list_toggle: 'Create a new list instead',
+    clickup_space_label: 'Space',
+    clickup_folder_label: 'Folder',
+    clickup_no_folder_option: 'No folder',
+    clickup_new_list_name_label: 'New list name',
+    clickup_new_list_name_placeholder: 'e.g. Chamber Website Test Bugs',
+    clickup_create_list_btn: 'Create list',
+    clickup_creating: 'Creating...',
+    clickup_list_name_required: 'Enter a name for the new list',
+    clickup_choose_list_required: 'Choose a list, or create one, before confirming',
+    clickup_view_btn: 'View in ClickUp',
+    clickup_send_btn: 'Send to ClickUp',
+    clickup_sending: 'Sending...',
+    clickup_send_fail_prefix: 'Failed to send: ',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1378,6 +1457,15 @@ let TCS = [], R = {}, CF = 'all', PROJ = '', SEC_MAP = {};
 let SEARCH_Q = '';
 let SELECT_MODE = false;
 let SELECTED_IDS = new Set();
+// ClickUp is optional and session-scoped (sessionStorage, not localStorage) —
+// a shared/multi-user browser should never silently carry a stale connection
+// across browser restarts, and connecting always requires the sign-in dialog.
+let CLICKUP_TOKEN = sessionStorage.getItem('qa_clickup_token') || '';
+let CLICKUP_USER = null;
+try { CLICKUP_USER = JSON.parse(sessionStorage.getItem('qa_clickup_user') || 'null'); } catch (e) { CLICKUP_USER = null; }
+let CLICKUP_LIST_ID = '';
+let CLICKUP_LIST_NAME = '';
+let CLICKUP_HIERARCHY = null;
 let _pendingFile = null;
 let CLAUDE_KEY = localStorage.getItem('qa_claude_key') || '';
 let _pendingSrsFile = null;
@@ -1585,6 +1673,11 @@ function render() {
           </div>
           <div class="bug-actions" style="grid-column:1/span 2;${tc.status === 'fail' ? '' : 'display:none'}">
             <button type="button" class="bug-action-btn" id="copy-bug-${esc(tc.id)}" onclick="copyAsBugReport('${esc(tc.id)}')">📋 ${t('copy_bug_btn')}</button>
+            ${CLICKUP_TOKEN && CLICKUP_LIST_ID ? (
+              tc.clickupTaskUrl
+                ? `<a class="bug-action-btn clickup-link" href="${esc(tc.clickupTaskUrl)}" target="_blank" rel="noopener">🔗 ${t('clickup_view_btn')}</a>`
+                : `<button type="button" class="bug-action-btn clickup-btn" id="clickup-btn-${esc(tc.id)}" onclick="sendToClickUp('${esc(tc.id)}')">🐛 ${t('clickup_send_btn')}</button>`
+            ) : ''}
           </div>
           <div style="grid-column:1/span 2">
             <div class="elbl">${t('exec_notes')}</div>
@@ -1882,6 +1975,285 @@ function confirmSpotcheck() {
   document.querySelectorAll('.fbar .fb').forEach(btn => btn.classList.remove('on'));
   CF = 'spotcheck';
   render();
+}
+
+// ── ClickUp integration (fully optional) ─────────────────────────────────────
+// Every request goes through clickupApiFetch(), which surfaces the same
+// honest, combined error message for a bad token AND for a browser-side CORS
+// block — ClickUp's API does not send CORS headers on its error responses
+// (verified directly), so a real browser cannot reliably tell the two apart.
+// "Copy as Bug Report" (always available) is the fallback either way.
+const CLICKUP_API = 'https://api.clickup.com/api/v2';
+const CLICKUP_PRIORITY_MAP = { P1: 1, P2: 3, P3: 4 }; // Urgent / Normal / Low
+
+function openClickUpKeyHelp() {
+  window.open('https://app.clickup.com/settings/apps', '_blank');
+}
+
+function openClickUpLoginModal() {
+  const modal = document.getElementById('clickup-login-modal');
+  const errEl = document.getElementById('clickup-login-error');
+  const tokenInput = document.getElementById('clickup-token-input');
+  if (errEl) errEl.style.display = 'none';
+  if (tokenInput) tokenInput.value = '';
+  if (modal) modal.classList.add('open');
+}
+function closeClickUpLoginModal() {
+  const modal = document.getElementById('clickup-login-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function clickupApiFetch(path, options) {
+  options = options || {};
+  let resp;
+  try {
+    resp = await fetch(CLICKUP_API + path, {
+      method: options.method || 'GET',
+      body: options.body,
+      headers: Object.assign({
+        'Authorization': CLICKUP_TOKEN,
+        'Content-Type': 'application/json',
+      }, options.headers || {}),
+    });
+  } catch (e) {
+    // fetch() itself threw — network-down or a CORS-blocked response, indistinguishable client-side
+    throw new Error(t('clickup_cors_hint'));
+  }
+  let data = {};
+  try { data = await resp.json(); } catch (e) { /* empty/non-JSON body */ }
+  if (!resp.ok) {
+    throw new Error((data && (data.err || data.ECODE)) || `HTTP ${resp.status}`);
+  }
+  return data;
+}
+
+async function connectClickUp() {
+  const tokenInput = document.getElementById('clickup-token-input');
+  const errEl = document.getElementById('clickup-login-error');
+  const btn = document.getElementById('clickup-connect-confirm-btn');
+  const token = tokenInput ? tokenInput.value.trim() : '';
+  if (!token) {
+    if (errEl) { errEl.textContent = t('clickup_token_required'); errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = t('clickup_connecting'); }
+  const previousToken = CLICKUP_TOKEN;
+  CLICKUP_TOKEN = token;
+  try {
+    const data = await clickupApiFetch('/user');
+    CLICKUP_USER = data.user ? { username: data.user.username, email: data.user.email } : { username: t('clickup_unknown_user') };
+    sessionStorage.setItem('qa_clickup_token', CLICKUP_TOKEN);
+    sessionStorage.setItem('qa_clickup_user', JSON.stringify(CLICKUP_USER));
+    updateClickUpUI();
+    closeClickUpLoginModal();
+    await openClickUpListModal(); // chain straight into picking/creating a list
+  } catch (e) {
+    CLICKUP_TOKEN = previousToken;
+    if (errEl) { errEl.textContent = t('clickup_connect_fail_prefix') + (e.message || ''); errEl.style.display = 'block'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = t('clickup_connect_confirm_btn'); }
+  }
+}
+
+function clickupSignOut() {
+  CLICKUP_TOKEN = '';
+  CLICKUP_USER = null;
+  CLICKUP_LIST_ID = '';
+  CLICKUP_LIST_NAME = '';
+  CLICKUP_HIERARCHY = null;
+  sessionStorage.removeItem('qa_clickup_token');
+  sessionStorage.removeItem('qa_clickup_user');
+  updateClickUpUI();
+  render();
+  autosaveProject();
+}
+
+function clickupChangeList() {
+  openClickUpListModal();
+}
+
+function updateClickUpUI() {
+  const chip = document.getElementById('clickup-chip');
+  const nameEl = document.getElementById('clickup-name');
+  const connectBtn = document.getElementById('clickup-connect-btn');
+  const connected = !!(CLICKUP_TOKEN && CLICKUP_USER);
+  if (chip) chip.style.display = connected ? 'flex' : 'none';
+  if (connectBtn) connectBtn.style.display = connected ? 'none' : 'inline-block';
+  if (nameEl) nameEl.textContent = connected
+    ? `🔌 ${CLICKUP_USER.username}${CLICKUP_LIST_NAME ? ' · ' + CLICKUP_LIST_NAME : ''}`
+    : '';
+}
+
+// ── ClickUp list picker / creator ────────────────────────────────────────────
+async function openClickUpListModal() {
+  const modal = document.getElementById('clickup-list-modal');
+  const errEl = document.getElementById('clickup-list-error');
+  const body = document.getElementById('clickup-list-body');
+  if (errEl) errEl.style.display = 'none';
+  if (modal) modal.classList.add('open');
+  if (body) body.innerHTML = `<p>${t('clickup_loading_lists')}</p>`;
+  try {
+    await fetchClickUpHierarchy();
+    renderClickUpListModalBody();
+  } catch (e) {
+    if (body) body.innerHTML = '';
+    if (errEl) { errEl.textContent = t('clickup_connect_fail_prefix') + (e.message || ''); errEl.style.display = 'block'; }
+  }
+}
+function closeClickUpListModal() {
+  const modal = document.getElementById('clickup-list-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function fetchClickUpHierarchy() {
+  const teamsData = await clickupApiFetch('/team');
+  const teams = teamsData.teams || [];
+  if (!teams.length) throw new Error(t('clickup_no_teams'));
+  const team = teams[0]; // most accounts have exactly one team/workspace
+  const spacesData = await clickupApiFetch(`/team/${team.id}/space?archived=false`);
+  const spaces = spacesData.spaces || [];
+  const fullSpaces = [];
+  for (const space of spaces) {
+    const [foldersData, listsData] = await Promise.all([
+      clickupApiFetch(`/space/${space.id}/folder?archived=false`),
+      clickupApiFetch(`/space/${space.id}/list?archived=false`),
+    ]);
+    fullSpaces.push({
+      id: space.id,
+      name: space.name,
+      folders: (foldersData.folders || []).map(f => ({
+        id: f.id, name: f.name,
+        lists: (f.lists || []).map(l => ({ id: l.id, name: l.name })),
+      })),
+      lists: (listsData.lists || []).map(l => ({ id: l.id, name: l.name })),
+    });
+  }
+  CLICKUP_HIERARCHY = { teamId: team.id, teamName: team.name, spaces: fullSpaces };
+}
+
+function renderClickUpListModalBody() {
+  const body = document.getElementById('clickup-list-body');
+  if (!body || !CLICKUP_HIERARCHY) return;
+  const options = [];
+  CLICKUP_HIERARCHY.spaces.forEach(space => {
+    space.lists.forEach(l => options.push({ id: l.id, label: `${space.name} / ${l.name}` }));
+    space.folders.forEach(f => f.lists.forEach(l => options.push({ id: l.id, label: `${space.name} / ${f.name} / ${l.name}` })));
+  });
+  const optionsHtml = options.map(o =>
+    `<option value="${esc(o.id)}" ${o.id === CLICKUP_LIST_ID ? 'selected' : ''}>${esc(o.label)}</option>`
+  ).join('');
+  const spaceOptionsHtml = CLICKUP_HIERARCHY.spaces.map(s =>
+    `<option value="${esc(s.id)}">${esc(s.name)}</option>`
+  ).join('');
+
+  body.innerHTML = `
+    <p>${t('clickup_list_desc')}</p>
+    <label for="clickup-list-select">${t('clickup_existing_list_label')}</label>
+    <select id="clickup-list-select">
+      <option value="">${t('clickup_choose_placeholder')}</option>
+      ${optionsHtml}
+    </select>
+    <div style="margin:-6px 0 14px">
+      <button type="button" class="bug-action-btn" onclick="toggleClickUpCreateList()">➕ ${t('clickup_create_list_toggle')}</button>
+    </div>
+    <div id="clickup-create-list-section" style="display:none">
+      <label for="clickup-new-space-select">${t('clickup_space_label')}</label>
+      <select id="clickup-new-space-select" onchange="onClickUpSpaceChange()">${spaceOptionsHtml}</select>
+      <label for="clickup-new-folder-select">${t('clickup_folder_label')}</label>
+      <select id="clickup-new-folder-select"></select>
+      <label for="clickup-new-list-name">${t('clickup_new_list_name_label')}</label>
+      <input type="text" id="clickup-new-list-name" placeholder="${t('clickup_new_list_name_placeholder')}">
+      <div class="modal-actions" style="justify-content:flex-start;margin-bottom:14px">
+        <button type="button" class="primary" id="clickup-create-list-btn" onclick="createClickUpList()">${t('clickup_create_list_btn')}</button>
+      </div>
+    </div>
+  `;
+  if (CLICKUP_HIERARCHY.spaces.length) onClickUpSpaceChange();
+}
+
+function toggleClickUpCreateList() {
+  const section = document.getElementById('clickup-create-list-section');
+  if (section) section.style.display = section.style.display === 'none' ? 'block' : 'none';
+}
+
+function onClickUpSpaceChange() {
+  const spaceSelect = document.getElementById('clickup-new-space-select');
+  const folderSelect = document.getElementById('clickup-new-folder-select');
+  if (!spaceSelect || !folderSelect || !CLICKUP_HIERARCHY) return;
+  const space = CLICKUP_HIERARCHY.spaces.find(s => s.id === spaceSelect.value);
+  const folders = space ? space.folders : [];
+  folderSelect.innerHTML = `<option value="">${t('clickup_no_folder_option')}</option>` +
+    folders.map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+}
+
+async function createClickUpList() {
+  const spaceSelect = document.getElementById('clickup-new-space-select');
+  const folderSelect = document.getElementById('clickup-new-folder-select');
+  const nameInput = document.getElementById('clickup-new-list-name');
+  const errEl = document.getElementById('clickup-list-error');
+  const btn = document.getElementById('clickup-create-list-btn');
+  const name = nameInput ? nameInput.value.trim() : '';
+  if (!name) {
+    if (errEl) { errEl.textContent = t('clickup_list_name_required'); errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = t('clickup_creating'); }
+  try {
+    const folderId = folderSelect && folderSelect.value;
+    const path = folderId ? `/folder/${folderId}/list` : `/space/${spaceSelect.value}/list`;
+    const data = await clickupApiFetch(path, { method: 'POST', body: JSON.stringify({ name }) });
+    await fetchClickUpHierarchy(); // refresh so the new list shows up in the picker
+    renderClickUpListModalBody();
+    const select = document.getElementById('clickup-list-select');
+    if (select && data.id) select.value = data.id;
+    toggleClickUpCreateList();
+  } catch (e) {
+    if (errEl) { errEl.textContent = t('clickup_connect_fail_prefix') + (e.message || ''); errEl.style.display = 'block'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = t('clickup_create_list_btn'); }
+  }
+}
+
+function confirmClickUpList() {
+  const select = document.getElementById('clickup-list-select');
+  const errEl = document.getElementById('clickup-list-error');
+  if (!select || !select.value) {
+    if (errEl) { errEl.textContent = t('clickup_choose_list_required'); errEl.style.display = 'block'; }
+    return;
+  }
+  CLICKUP_LIST_ID = select.value;
+  CLICKUP_LIST_NAME = select.options[select.selectedIndex].textContent;
+  closeClickUpListModal();
+  updateClickUpUI();
+  render();
+  autosaveProject();
+}
+
+// ── Sending a failed case to ClickUp ─────────────────────────────────────────
+async function sendToClickUp(tcId) {
+  const tc = TCS.find(c => c.id === tcId);
+  if (!tc || !CLICKUP_TOKEN || !CLICKUP_LIST_ID) return;
+  const btn = document.getElementById('clickup-btn-' + tcId);
+  if (btn) { btn.disabled = true; btn.textContent = t('clickup_sending'); }
+  try {
+    const data = await clickupApiFetch(`/list/${CLICKUP_LIST_ID}/task`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: `${tc.id}: ${tc.title || ''}`,
+        description: formatBugReport(tc),
+        priority: CLICKUP_PRIORITY_MAP[tc.priority] || 3,
+      }),
+    });
+    tc.clickupTaskId = data.id;
+    tc.clickupTaskUrl = data.url;
+    autosaveProject();
+    render();
+  } catch (e) {
+    alert(t('clickup_send_fail_prefix') + (e.message || ''));
+    if (btn) { btn.disabled = false; btn.textContent = '🐛 ' + t('clickup_send_btn'); }
+  }
 }
 
 // ── Platform checkboxes → dynamic tabs ──────────────────────────────────────
@@ -2767,6 +3139,13 @@ function buildTracker(data) {
     setVal('f-build', savedProject.meta.build);
     setVal('f-date', savedProject.meta.date);
     if (savedProject.meta.activeFilter) CF = savedProject.meta.activeFilter;
+    // Restore which ClickUp list this project files bugs to — but never the
+    // token/session itself, which stays session-only and must be reconnected
+    // explicitly via the sign-in dialog.
+    if (savedProject.meta.clickupListId) {
+      CLICKUP_LIST_ID = savedProject.meta.clickupListId;
+      CLICKUP_LIST_NAME = savedProject.meta.clickupListName || '';
+    }
   }
   if (savedProject && savedProject.attachments) {
     driveFiles = savedProject.attachments;
@@ -2786,6 +3165,7 @@ function buildTracker(data) {
     testerInput.value = gUser.name;
   }
 
+  updateClickUpUI(); // reflect a restored ClickUp list choice (and any already-active session) in the chip
   render(); // Render after initGoogleAuth has potentially set gUser
   showStatus('');
   autosaveProject();
@@ -2821,6 +3201,9 @@ function serializeProject() {
         build: document.getElementById('f-build')?.value || '',
         date: document.getElementById('f-date')?.value || '',
         activeFilter: CF,
+        // ClickUp list choice travels with the project — the token/session never does
+        clickupListId: CLICKUP_LIST_ID || '',
+        clickupListName: CLICKUP_LIST_NAME || '',
       },
       attachments: driveFiles,
     },
@@ -3317,6 +3700,7 @@ window.addEventListener('load', () => {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   }
   checkForResumableProject();
+  updateClickUpUI(); // reflect a ClickUp session already established earlier in this same tab, if any
 });
 </script>
 <span style="font-family:'Amiri';font-size:0;position:absolute;opacity:0" aria-hidden="true">أ</span>
@@ -3336,6 +3720,47 @@ window.addEventListener('load', () => {
       <div class="modal-actions">
         <button type="button" class="ghost" onclick="closeSpotcheckModal()" data-i18n="na_cancel">إلغاء</button>
         <button type="button" class="primary" onclick="confirmSpotcheck()" data-i18n="spotcheck_confirm_btn">🎲 اختيار</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ClickUp sign-in dialog (optional — never triggered automatically) ═══════ -->
+<div class="modal-overlay" id="clickup-login-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span data-i18n="clickup_login_modal_title">🔌 ربط ClickUp</span>
+      <button type="button" onclick="closeClickUpLoginModal()" data-i18n-title="close_title" title="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <p data-i18n="clickup_login_modal_desc">أدخل مفتاح API الشخصي الخاص بك من ClickUp. يُحفظ فقط لهذه الجلسة/التبويب الحالي (وليس بشكل دائم) — مفيد إن كان المتصفح مستخدَماً من أكثر من شخص.</p>
+      <div id="clickup-login-error" class="modal-error" style="display:none"></div>
+      <label for="clickup-token-input" data-i18n="clickup_token_label">مفتاح API الشخصي</label>
+      <input type="password" id="clickup-token-input" placeholder="pk_...">
+      <div style="margin:-6px 0 14px">
+        <button type="button" class="bug-action-btn" onclick="openClickUpKeyHelp()" data-i18n="clickup_help_btn">الحصول على المفتاح ↗</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" onclick="closeClickUpLoginModal()" data-i18n="na_cancel">إلغاء</button>
+        <button type="button" class="primary" id="clickup-connect-confirm-btn" onclick="connectClickUp()" data-i18n="clickup_connect_confirm_btn">ربط</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ClickUp list picker/creator dialog ══════════════════════════════════════ -->
+<div class="modal-overlay" id="clickup-list-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span data-i18n="clickup_list_modal_title">📋 اختر قائمة ClickUp</span>
+      <button type="button" onclick="closeClickUpListModal()" data-i18n-title="close_title" title="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="clickup-list-error" class="modal-error" style="display:none"></div>
+      <div id="clickup-list-body"></div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" onclick="closeClickUpListModal()" data-i18n="na_cancel">إلغاء</button>
+        <button type="button" class="primary" onclick="confirmClickUpList()" data-i18n="clickup_confirm_list_btn">✓ تأكيد</button>
       </div>
     </div>
   </div>
