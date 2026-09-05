@@ -174,6 +174,12 @@ body::before{
 .pb{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
 .pbf{height:100%;border-radius:3px;background:var(--status-pass);transition:width .3s}
 
+.search-row{padding:10px 20px 0;background:var(--surface-glass);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);display:flex;align-items:center;gap:8px}
+.search-input{flex:1;font-size:13px;padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:Arial}
+.search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.search-clear-btn{background:none;border:none;color:var(--text-muted);font-size:15px;cursor:pointer;padding:4px 8px}
+.search-clear-btn:hover{color:var(--text)}
+
 .fbar{padding:10px 20px;background:var(--surface-glass);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border-bottom:1px solid var(--glass-border);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .fb{font-size:13px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg);color:var(--text-muted);cursor:pointer;transition:all .15s}
 .fb:hover{transform:translateY(-1px);border-color:var(--accent)}
@@ -649,6 +655,11 @@ body::before{
     <div class="pb"><div class="pbf" id="pb-fill" style="width:0%"></div></div>
   </div>
 
+  <div class="search-row">
+    <input type="text" id="search-input" class="search-input" data-i18n-placeholder="search_placeholder" placeholder="🔍 ابحث برقم الحالة أو العنوان أو الخطوات..." oninput="onSearchInput(this)">
+    <button type="button" id="search-clear-btn" class="search-clear-btn" onclick="clearSearch()" data-i18n-title="remove_title" title="إزالة" style="display:none">✕</button>
+  </div>
+
   <div class="fbar">
     <button class="fb on" onclick="setFilter('all',this)" data-i18n="fb_all">الكل</button>
     <button class="fb" onclick="setFilter('pending',this)" data-i18n="fb_pending">معلق</button>
@@ -941,6 +952,7 @@ const I18N = {
     project_load_fail_prefix: 'فشل تحميل ملف المشروع: ',
     save_project_btn: '💾 حفظ المشروع',
     save_project_done: '✓ تم الحفظ',
+    search_placeholder: '🔍 ابحث برقم الحالة أو العنوان أو الخطوات...',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1115,6 +1127,7 @@ const I18N = {
     project_load_fail_prefix: 'Failed to load project file: ',
     save_project_btn: '💾 Save Project',
     save_project_done: '✓ Saved',
+    search_placeholder: '🔍 Search by ID, title, or steps...',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1280,6 +1293,7 @@ function setLanguage(lang) {
 }
 
 let TCS = [], R = {}, CF = 'all', PROJ = '', SEC_MAP = {};
+let SEARCH_Q = '';
 let _pendingFile = null;
 let CLAUDE_KEY = localStorage.getItem('qa_claude_key') || '';
 let _pendingSrsFile = null;
@@ -1360,6 +1374,12 @@ function render() {
     // If a platform filter is applied
     const platDef = ALL_PLAT_DEFS.find(d => d.key === CF);
     if (platDef && !platDef.match.some(k => (tc.platform||'').toLowerCase().includes(k))) return false;
+
+    // Free-text search across id/title/steps — layered on top of the filters above
+    if (SEARCH_Q) {
+      const haystack = `${tc.id||''} ${tc.title||''} ${tc.steps||''}`.toLowerCase();
+      if (!haystack.includes(SEARCH_Q)) return false;
+    }
 
     return true;
   });
@@ -1625,6 +1645,22 @@ function setFilter(filter, el) {
   el.classList.add('on');
   CF = filter; // Set current filter
   render(); // Re-render content with new filter
+}
+
+// ── Free-text search (layered on top of the status/platform filters) ───────
+function onSearchInput(el) {
+  SEARCH_Q = el.value.trim().toLowerCase();
+  const clearBtn = document.getElementById('search-clear-btn');
+  if (clearBtn) clearBtn.style.display = SEARCH_Q ? 'block' : 'none';
+  render();
+}
+function clearSearch() {
+  SEARCH_Q = '';
+  const input = document.getElementById('search-input');
+  if (input) input.value = '';
+  const clearBtn = document.getElementById('search-clear-btn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  render();
 }
 
 // ── Platform checkboxes → dynamic tabs ──────────────────────────────────────
