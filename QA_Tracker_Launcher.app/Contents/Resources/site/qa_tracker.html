@@ -201,6 +201,25 @@ body.select-mode .tc-select{display:inline-flex}
 .sec-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 
 @keyframes glassIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+/* ═══ MODAL DIALOG (reusable — spot-check picker, ClickUp sign-in/list picker) ═══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,10,20,.55);z-index:600;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border-radius:18px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;color:var(--text);animation:modalIn .15s ease-out}
+.modal-hdr{background:linear-gradient(135deg,var(--accent),var(--accent-hover));padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.modal-hdr span{color:#fff;font-size:15px;font-weight:600}
+.modal-hdr button{background:none;border:none;color:rgba(255,255,255,.8);font-size:20px;cursor:pointer;line-height:1;padding:0}
+.modal-hdr button:hover{color:#fff}
+.modal-body{padding:20px;max-height:70vh;overflow-y:auto}
+.modal-body p{font-size:13px;color:var(--text-muted);margin:0 0 14px;line-height:1.6}
+.modal-body label{font-size:12.5px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:6px}
+.modal-body input[type=text],.modal-body input[type=number],.modal-body input[type=password],.modal-body select{width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Arial;font-size:13px;margin-bottom:14px;box-sizing:border-box}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-actions button{font-size:13px;padding:8px 18px;border-radius:10px;border:0;cursor:pointer;font-family:Arial;font-weight:500}
+.modal-actions button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-hover));color:#fff;box-shadow:0 2px 8px var(--accent-glow)}
+.modal-actions button.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.modal-error{font-size:12.5px;color:var(--status-fail);background:var(--status-fail-bg);border-radius:8px;padding:8px 10px;margin:-6px 0 14px}
 
 .tc-card{background:var(--surface-glass);backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);border:1px solid var(--glass-border);border-radius:16px;margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow-soft);transition:transform .15s,box-shadow .15s,border-color .15s}
 .tc-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(26,26,46,.06),0 16px 32px rgba(79,70,229,.1)}
@@ -643,6 +662,7 @@ body.select-mode .tc-select{display:inline-flex}
       <button class="btn" onclick="expandAll()" data-i18n="expand_all">فتح الكل</button>
       <button class="btn" onclick="collapseAll()" data-i18n="collapse_all">إغلاق الكل</button>
       <button class="btn" id="select-mode-btn" onclick="toggleSelectMode()" data-i18n="select_mode_btn">☑️ تحديد متعدد</button>
+      <button class="btn" onclick="openSpotcheckModal()" data-i18n="spotcheck_btn">🎲 فحص عشوائي</button>
       <button class="btn btn-save" id="save-project-btn" onclick="saveProjectFile()" data-i18n="save_project_btn">💾 حفظ المشروع</button>
       <button class="btn btn-csv" onclick="exportCSV()">CSV</button>
       <div class="pdd" id="pdd">
@@ -990,6 +1010,14 @@ const I18N = {
     bulk_clear: 'إلغاء التحديد',
     bulk_exit: '✕ إنهاء',
     bulk_selected_suffix: 'محددة',
+    spotcheck_btn: '🎲 فحص عشوائي',
+    spotcheck_modal_title: '🎲 فحص عشوائي',
+    spotcheck_modal_desc: 'اختر عدد الحالات الناجحة (Pass) التي تريد إعادة التحقق منها عشوائياً.',
+    spotcheck_count_label: 'عدد الحالات',
+    spotcheck_confirm_btn: '🎲 اختيار',
+    spotcheck_invalid_count: 'أدخل عدداً صحيحاً أكبر من صفر',
+    spotcheck_no_passed: 'لا توجد حالات ناجحة (Pass) لإعادة التحقق منها بعد',
+    spotcheck_info_suffix: 'حالة عشوائية للمراجعة',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1174,6 +1202,14 @@ const I18N = {
     bulk_clear: 'Clear selection',
     bulk_exit: '✕ Done',
     bulk_selected_suffix: 'selected',
+    spotcheck_btn: '🎲 Spot-check',
+    spotcheck_modal_title: '🎲 Random Spot-check',
+    spotcheck_modal_desc: 'Choose how many already-Passed cases to randomly re-verify.',
+    spotcheck_count_label: 'Number of cases',
+    spotcheck_confirm_btn: '🎲 Pick',
+    spotcheck_invalid_count: 'Enter a whole number greater than zero',
+    spotcheck_no_passed: 'No Passed cases available to re-verify yet',
+    spotcheck_info_suffix: 'random cases to review',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1422,6 +1458,8 @@ function render() {
     // If a platform filter is applied
     const platDef = ALL_PLAT_DEFS.find(d => d.key === CF);
     if (platDef && !platDef.match.some(k => (tc.platform||'').toLowerCase().includes(k))) return false;
+    // Random spot-check sample — only the cases picked by the last spot-check run
+    if (CF === 'spotcheck' && !(SPOTCHECK_IDS && SPOTCHECK_IDS.has(tc.id))) return false;
 
     // Free-text search across id/title/steps — layered on top of the filters above
     if (SEARCH_Q) {
@@ -1435,6 +1473,8 @@ function render() {
   if (filteredTCS.length === 0) {
     mainDiv.innerHTML = `<div class="empty">${t('empty_state')}</div>`;
     document.getElementById('fbar-info').textContent = '';
+  } else if (CF === 'spotcheck') {
+    document.getElementById('fbar-info').textContent = `🎲 ${filteredTCS.length} ${t('spotcheck_info_suffix')}`;
   } else {
     document.getElementById('fbar-info').textContent = `${filteredTCS.length} ${t('n_test_cases')}`;
   }
@@ -1801,6 +1841,47 @@ function bulkSetStatus(newStatus) {
   clearSelection();
   render();
   autosaveProject();
+}
+
+// ── Random regression spot-check picker — an explicit, user-chosen sample of
+// already-passed cases to re-verify; never runs on its own, always opt-in. ──
+let SPOTCHECK_IDS = null;
+
+function openSpotcheckModal() {
+  const modal = document.getElementById('spotcheck-modal');
+  const errEl = document.getElementById('spotcheck-modal-error');
+  if (errEl) errEl.style.display = 'none';
+  if (modal) modal.classList.add('open');
+}
+function closeSpotcheckModal() {
+  const modal = document.getElementById('spotcheck-modal');
+  if (modal) modal.classList.remove('open');
+}
+function confirmSpotcheck() {
+  const input = document.getElementById('spotcheck-count');
+  const errEl = document.getElementById('spotcheck-modal-error');
+  const requested = parseInt(input && input.value, 10);
+  if (!requested || requested < 1) {
+    if (errEl) { errEl.textContent = t('spotcheck_invalid_count'); errEl.style.display = 'block'; }
+    return;
+  }
+  const passedCases = TCS.filter(tc => tc.status === 'pass');
+  if (!passedCases.length) {
+    if (errEl) { errEl.textContent = t('spotcheck_no_passed'); errEl.style.display = 'block'; }
+    return;
+  }
+  // Fisher–Yates shuffle, then take the first N — unbiased random sample
+  const shuffled = passedCases.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const picked = shuffled.slice(0, Math.min(requested, shuffled.length));
+  SPOTCHECK_IDS = new Set(picked.map(tc => tc.id));
+  closeSpotcheckModal();
+  document.querySelectorAll('.fbar .fb').forEach(btn => btn.classList.remove('on'));
+  CF = 'spotcheck';
+  render();
 }
 
 // ── Platform checkboxes → dynamic tabs ──────────────────────────────────────
@@ -3239,5 +3320,25 @@ window.addEventListener('load', () => {
 });
 </script>
 <span style="font-family:'Amiri';font-size:0;position:absolute;opacity:0" aria-hidden="true">أ</span>
+
+<!-- ═══ Spot-check picker dialog ═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="spotcheck-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span data-i18n="spotcheck_modal_title">🎲 فحص عشوائي</span>
+      <button type="button" onclick="closeSpotcheckModal()" data-i18n-title="close_title" title="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <p data-i18n="spotcheck_modal_desc">اختر عدد الحالات الناجحة (Pass) التي تريد إعادة التحقق منها عشوائياً.</p>
+      <div id="spotcheck-modal-error" class="modal-error" style="display:none"></div>
+      <label for="spotcheck-count" data-i18n="spotcheck_count_label">عدد الحالات</label>
+      <input type="number" id="spotcheck-count" min="1" value="10">
+      <div class="modal-actions">
+        <button type="button" class="ghost" onclick="closeSpotcheckModal()" data-i18n="na_cancel">إلغاء</button>
+        <button type="button" class="primary" onclick="confirmSpotcheck()" data-i18n="spotcheck_confirm_btn">🎲 اختيار</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
