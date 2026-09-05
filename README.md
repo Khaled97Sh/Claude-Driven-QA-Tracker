@@ -4,6 +4,8 @@ A single-file, no-backend QA test-case tracker built for Arabic-speaking (and En
 
 No build step, no server, no database. Everything runs from one HTML file, opened directly in a browser or served by a one-line local web server.
 
+> **Note:** This is currently a **manual testing** tool — you execute each test case yourself and record the result (pass/fail/blocked/skip). It does not run or automate any tests for you.
+
 ---
 
 ## ✨ Features
