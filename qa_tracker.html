@@ -180,6 +180,15 @@ body::before{
 .search-clear-btn{background:none;border:none;color:var(--text-muted);font-size:15px;cursor:pointer;padding:4px 8px}
 .search-clear-btn:hover{color:var(--text)}
 
+.bulk-bar{padding:8px 20px;background:var(--accent-soft-bg);border-bottom:1px solid var(--glass-border);display:flex;align-items:center;gap:14px;font-size:13px;color:var(--accent-soft-text);font-weight:500}
+.bulk-bar-actions{display:flex;gap:8px;margin-inline-start:auto}
+.bulk-bar-actions button{font-size:12.5px;padding:6px 13px;border-radius:10px;border:0;cursor:pointer;font-family:Arial;font-weight:500;background:linear-gradient(135deg,var(--accent),var(--accent-hover));color:#fff}
+.bulk-bar-actions button.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.tc-select{display:none;align-items:center;margin-inline-end:4px}
+body.select-mode .tc-select{display:inline-flex}
+.tc-select input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+#select-mode-btn.on{background:linear-gradient(135deg,var(--accent),var(--accent-hover));border-color:transparent}
+
 .fbar{padding:10px 20px;background:var(--surface-glass);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border-bottom:1px solid var(--glass-border);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .fb{font-size:13px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg);color:var(--text-muted);cursor:pointer;transition:all .15s}
 .fb:hover{transform:translateY(-1px);border-color:var(--accent)}
@@ -633,6 +642,7 @@ body::before{
       </div>
       <button class="btn" onclick="expandAll()" data-i18n="expand_all">فتح الكل</button>
       <button class="btn" onclick="collapseAll()" data-i18n="collapse_all">إغلاق الكل</button>
+      <button class="btn" id="select-mode-btn" onclick="toggleSelectMode()" data-i18n="select_mode_btn">☑️ تحديد متعدد</button>
       <button class="btn btn-save" id="save-project-btn" onclick="saveProjectFile()" data-i18n="save_project_btn">💾 حفظ المشروع</button>
       <button class="btn btn-csv" onclick="exportCSV()">CSV</button>
       <div class="pdd" id="pdd">
@@ -666,6 +676,16 @@ body::before{
   <div class="search-row">
     <input type="text" id="search-input" class="search-input" data-i18n-placeholder="search_placeholder" placeholder="🔍 ابحث برقم الحالة أو العنوان أو الخطوات..." oninput="onSearchInput(this)">
     <button type="button" id="search-clear-btn" class="search-clear-btn" onclick="clearSearch()" data-i18n-title="remove_title" title="إزالة" style="display:none">✕</button>
+  </div>
+
+  <div class="bulk-bar" id="bulk-bar" style="display:none">
+    <span id="bulk-count-text">0</span>
+    <div class="bulk-bar-actions">
+      <button type="button" onclick="bulkSetStatus('pass')" data-i18n="bulk_mark_pass">✓ تمييز كناجح</button>
+      <button type="button" onclick="bulkSetStatus('skip')" data-i18n="bulk_mark_skip">⤼ تخطي</button>
+      <button type="button" class="ghost" onclick="clearSelection()" data-i18n="bulk_clear">إلغاء التحديد</button>
+      <button type="button" class="ghost" onclick="toggleSelectMode()" data-i18n="bulk_exit">✕ إنهاء</button>
+    </div>
   </div>
 
   <div class="fbar">
@@ -964,6 +984,12 @@ const I18N = {
     copy_bug_btn: 'نسخ كتقرير خطأ',
     copy_bug_done: 'تم النسخ',
     bug_priority_label: 'الأولوية:',
+    select_mode_btn: '☑️ تحديد متعدد',
+    bulk_mark_pass: '✓ تمييز كناجح',
+    bulk_mark_skip: '⤼ تخطي',
+    bulk_clear: 'إلغاء التحديد',
+    bulk_exit: '✕ إنهاء',
+    bulk_selected_suffix: 'محددة',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1142,6 +1168,12 @@ const I18N = {
     copy_bug_btn: 'Copy as Bug Report',
     copy_bug_done: 'Copied',
     bug_priority_label: 'Priority:',
+    select_mode_btn: '☑️ Select multiple',
+    bulk_mark_pass: '✓ Mark Pass',
+    bulk_mark_skip: '⤼ Mark Skip',
+    bulk_clear: 'Clear selection',
+    bulk_exit: '✕ Done',
+    bulk_selected_suffix: 'selected',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1308,6 +1340,8 @@ function setLanguage(lang) {
 
 let TCS = [], R = {}, CF = 'all', PROJ = '', SEC_MAP = {};
 let SEARCH_Q = '';
+let SELECT_MODE = false;
+let SELECTED_IDS = new Set();
 let _pendingFile = null;
 let CLAUDE_KEY = localStorage.getItem('qa_claude_key') || '';
 let _pendingSrsFile = null;
@@ -1449,6 +1483,9 @@ function render() {
       <div class="tc-card ${statusClass}" id="tc-${esc(tc.id)}">
         <div class="tc-hdr" onclick="toggleCase(this)">
           <div class="tc-hdr-l">
+            <label class="tc-select" onclick="event.stopPropagation()">
+              <input type="checkbox" data-id="${esc(tc.id)}" onchange="toggleCaseSelection('${esc(tc.id)}', this)" ${SELECTED_IDS.has(tc.id) ? 'checked' : ''}>
+            </label>
             <div class="tcid">${esc(tc.id)}</div>
             <div class="tctitle">${esc(tc.title)}</div>
             <div class="badges">
@@ -1720,6 +1757,50 @@ function clearSearch() {
   const clearBtn = document.getElementById('search-clear-btn');
   if (clearBtn) clearBtn.style.display = 'none';
   render();
+}
+
+// ── Bulk actions — select multiple cases, mark them all at once ─────────────
+function toggleSelectMode() {
+  SELECT_MODE = !SELECT_MODE;
+  document.body.classList.toggle('select-mode', SELECT_MODE);
+  const btn = document.getElementById('select-mode-btn');
+  if (btn) btn.classList.toggle('on', SELECT_MODE);
+  if (!SELECT_MODE) {
+    // Leaving select mode clears any in-progress selection
+    SELECTED_IDS.clear();
+    document.querySelectorAll('.tc-select input').forEach(cb => { cb.checked = false; });
+  }
+  updateBulkBar();
+}
+
+function toggleCaseSelection(tcId, checkboxEl) {
+  if (checkboxEl.checked) SELECTED_IDS.add(tcId);
+  else SELECTED_IDS.delete(tcId);
+  updateBulkBar();
+}
+
+function clearSelection() {
+  SELECTED_IDS.clear();
+  document.querySelectorAll('.tc-select input').forEach(cb => { cb.checked = false; });
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  const countText = document.getElementById('bulk-count-text');
+  if (!bar || !countText) return;
+  bar.style.display = SELECT_MODE ? 'flex' : 'none';
+  countText.textContent = `${SELECTED_IDS.size} ${t('bulk_selected_suffix')}`;
+}
+
+function bulkSetStatus(newStatus) {
+  if (!SELECTED_IDS.size) return;
+  TCS.forEach(tc => {
+    if (SELECTED_IDS.has(tc.id)) tc.status = newStatus;
+  });
+  clearSelection();
+  render();
+  autosaveProject();
 }
 
 // ── Platform checkboxes → dynamic tabs ──────────────────────────────────────
