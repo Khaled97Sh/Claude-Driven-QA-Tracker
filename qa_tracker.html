@@ -1644,8 +1644,15 @@ function onTcCountChange() {
 }
 
 function renderPlatformTabs() {
+  // Prefer tabs that actually have matching cases in the loaded data — this
+  // is what must drive the tabs after resuming/importing a saved project or
+  // a plain JSON file, since the upload-screen checkboxes are never re-ticked
+  // in that flow (and may still reflect an unrelated previous project).
+  const withData = TCS.length
+    ? PLATFORM_DEFS.filter(d => TCS.some(tc => d.match.some(k => (tc.platform || '').toLowerCase().includes(k))))
+    : [];
   const checked = getSelectedPlatformDefs();
-  const useDefs = checked.length ? checked : LEGACY_PLATFORM_DEFS;
+  const useDefs = withData.length ? withData : (checked.length ? checked : LEGACY_PLATFORM_DEFS);
   ACTIVE_PLATFORMS = useDefs.map(d => d.key);
   const sep = document.getElementById('fbar-sep');
   if (sep) sep.hidden = useDefs.length === 0;
@@ -1655,6 +1662,12 @@ function renderPlatformTabs() {
       `<button class="fb" onclick="setFilter('${d.key}',this)">${d.emoji} ${esc(platLabel(d))}</button>`
     ).join('');
   }
+  // Re-sync which tab shows as active (matters after restoring a saved
+  // project's filter, since the tabs above were just rebuilt from scratch).
+  document.querySelectorAll('.fbar .fb').forEach(btn => {
+    const onclick = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('on', onclick.includes(`setFilter('${CF}'`));
+  });
 }
 
 document.addEventListener('change', e => {
