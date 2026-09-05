@@ -220,6 +220,8 @@ body.select-mode .tc-select{display:inline-flex}
 .modal-actions button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-hover));color:#fff;box-shadow:0 2px 8px var(--accent-glow)}
 .modal-actions button.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
 .modal-error{font-size:12.5px;color:var(--status-fail);background:var(--status-fail-bg);border-radius:8px;padding:8px 10px;margin:-6px 0 14px}
+.api-allow-writes-row{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;font-weight:400;color:var(--text);cursor:pointer;margin-bottom:10px}
+.api-allow-writes-row input{width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:var(--accent)}
 
 .tc-card{background:var(--surface-glass);backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);border:1px solid var(--glass-border);border-radius:16px;margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow-soft);transition:transform .15s,box-shadow .15s,border-color .15s}
 .tc-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(26,26,46,.06),0 16px 32px rgba(79,70,229,.1)}
@@ -324,6 +326,11 @@ body.select-mode .tc-select{display:inline-flex}
 .bug-action-btn.clickup-btn:hover{background:#7b68ee;color:#fff}
 .bug-action-btn.clickup-link{border-color:var(--status-pass);color:var(--status-pass)}
 .clickup-assignee-select{font-size:12px;padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:Arial;max-width:160px}
+/* Live API test execution */
+.api-run-row .rval{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.api-request-line{font-family:monospace;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px 9px;direction:ltr}
+.api-run-locked{font-size:11.5px;color:var(--text-muted);cursor:help}
+.api-last-run{font-size:11px;color:var(--text-muted)}
 
 /* Upload */
 .upload-section{margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)}
@@ -675,6 +682,8 @@ body.select-mode .tc-select{display:inline-flex}
       <button class="btn" onclick="collapseAll()" data-i18n="collapse_all">إغلاق الكل</button>
       <button class="btn" id="select-mode-btn" onclick="toggleSelectMode()" data-i18n="select_mode_btn">☑️ تحديد متعدد</button>
       <button class="btn" onclick="openSpotcheckModal()" data-i18n="spotcheck_btn">🎲 فحص عشوائي</button>
+      <button class="btn" id="api-settings-btn" onclick="openApiSettingsModal()" data-i18n="api_settings_btn">⚙️ إعدادات API</button>
+      <button class="btn" onclick="runAllApiTests()" data-i18n="api_run_all_btn">▶ تشغيل اختبارات API</button>
       <button class="btn btn-save" id="save-project-btn" onclick="saveProjectFile()" data-i18n="save_project_btn">💾 حفظ المشروع</button>
       <button class="btn btn-csv" onclick="exportCSV()">CSV</button>
       <div class="pdd" id="pdd">
@@ -1067,6 +1076,29 @@ const I18N = {
     clickup_assignee_title: 'إسناد الخطأ إلى (اختياري)',
     clickup_unassigned_option: '— غير مُسنَد —',
     clickup_uploading_attachments: 'جارٍ رفع المرفقات',
+    api_settings_btn: 'إعدادات API',
+    api_run_all_btn: '▶ تشغيل اختبارات API',
+    api_settings_modal_title: '⚙️ إعدادات تشغيل اختبارات API',
+    api_settings_desc: 'لتشغيل حالات API تلقائياً، حدد عنوان الخادم الفعلي الذي سترسل الطلبات الحقيقية إليه.',
+    api_base_url_label: 'عنوان الخادم الأساسي (Base URL)',
+    api_bearer_token_label: 'Bearer Token (اختياري)',
+    api_allow_writes_label: 'السماح بتشغيل الطلبات المُغيِّرة للبيانات (POST/PUT/PATCH/DELETE) تلقائياً',
+    api_allow_writes_warning: '⚠️ عند تفعيل هذا الخيار، سيتم فعلياً إنشاء/تعديل/حذف بيانات حقيقية على الخادم المحدد أعلاه. حالات GET تُشغَّل دائماً بأمان بدون الحاجة لتفعيله.',
+    api_allow_writes_confirm: 'تحذير: سيؤدي هذا إلى تنفيذ طلبات POST/PUT/PATCH/DELETE حقيقية تلقائياً — قد تُنشئ أو تُعدّل أو تحذف بيانات فعلية على الخادم المحدد. هل أنت متأكد؟',
+    api_settings_save_btn: '✓ حفظ',
+    api_run_label: 'تشغيل API:',
+    api_run_btn: 'تشغيل',
+    api_writes_locked: 'مقفل — فعّل "السماح بالطلبات المُغيِّرة" من إعدادات API',
+    api_writes_locked_title: 'هذا الطلب قد يُغيّر بيانات حقيقية — مقفل افتراضياً',
+    api_writes_locked_alert: 'هذا الطلب قد يُغيّر بيانات حقيقية (POST/PUT/PATCH/DELETE) — فعّل "السماح بالطلبات المُغيِّرة" من إعدادات API أولاً.',
+    api_last_run_prefix: 'آخر تشغيل:',
+    api_running: 'جارٍ التشغيل...',
+    api_base_url_required: 'حدد عنوان الخادم الأساسي (Base URL) من إعدادات API أولاً',
+    api_network_fail_prefix: 'تعذّر الاتصال: ',
+    api_expected_label: 'المتوقع:',
+    api_body_contains_ok: 'محتوى الاستجابة مطابق للمتوقع',
+    api_body_contains_fail_prefix: 'محتوى الاستجابة لا يحتوي على: ',
+    api_none_runnable: 'لا توجد حالات API قابلة للتشغيل التلقائي حالياً',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1296,6 +1328,29 @@ const I18N = {
     clickup_assignee_title: 'Assign bug to (optional)',
     clickup_unassigned_option: '— Unassigned —',
     clickup_uploading_attachments: 'Uploading attachments',
+    api_settings_btn: 'API Settings',
+    api_run_all_btn: '▶ Run API Tests',
+    api_settings_modal_title: '⚙️ API Test Execution Settings',
+    api_settings_desc: 'To run API cases automatically, set the real server the tool will send live requests to.',
+    api_base_url_label: 'Base URL',
+    api_bearer_token_label: 'Bearer Token (optional)',
+    api_allow_writes_label: 'Allow running data-changing requests (POST/PUT/PATCH/DELETE) automatically',
+    api_allow_writes_warning: '⚠️ Enabling this will actually create/update/delete real data on the server set above. GET cases always run safely without needing this.',
+    api_allow_writes_confirm: 'Warning: this will send real POST/PUT/PATCH/DELETE requests automatically — they may create, modify, or delete real data on the configured server. Are you sure?',
+    api_settings_save_btn: '✓ Save',
+    api_run_label: 'API Run:',
+    api_run_btn: 'Run',
+    api_writes_locked: 'Locked — enable "Allow data-changing requests" in API Settings',
+    api_writes_locked_title: 'This request may change real data — locked by default',
+    api_writes_locked_alert: 'This request may change real data (POST/PUT/PATCH/DELETE) — enable "Allow data-changing requests" in API Settings first.',
+    api_last_run_prefix: 'Last run:',
+    api_running: 'Running...',
+    api_base_url_required: 'Set a Base URL in API Settings first',
+    api_network_fail_prefix: 'Could not connect: ',
+    api_expected_label: 'expected:',
+    api_body_contains_ok: 'response body matches expected content',
+    api_body_contains_fail_prefix: 'response body is missing: ',
+    api_none_runnable: 'No API cases are currently runnable',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -1474,6 +1529,11 @@ let CLICKUP_LIST_ID = '';
 let CLICKUP_LIST_NAME = '';
 let CLICKUP_HIERARCHY = null;
 let CLICKUP_LIST_MEMBERS = [];
+// Live API test execution — project-level (base URL travels with the saved
+// project; the bearer token stays session-only and is never written to disk).
+let API_BASE_URL = '';
+let API_ALLOW_WRITES = false;
+let API_BEARER_TOKEN = sessionStorage.getItem('qa_api_bearer_token') || '';
 let _pendingFile = null;
 let CLAUDE_KEY = localStorage.getItem('qa_claude_key') || '';
 let _pendingSrsFile = null;
@@ -1653,6 +1713,17 @@ function render() {
             <div class="rlbl">${t('row_exp')}</div>
             <div class="rval">${esc(tc.exp) || '—'}</div>
           </div>
+          ${tc.apiRequest ? `
+          <div class="row api-run-row">
+            <div class="rlbl">${t('api_run_label')}</div>
+            <div class="rval">
+              <code class="api-request-line">${esc((tc.apiRequest.method || 'GET').toUpperCase())} ${esc(tc.apiRequest.path || '')}</code>
+              ${isApiWriteMethod(tc.apiRequest.method) && !API_ALLOW_WRITES
+                ? `<span class="api-run-locked" data-i18n-title="api_writes_locked_title" title="${t('api_writes_locked_title')}">🔒 ${t('api_writes_locked')}</span>`
+                : `<button type="button" class="bug-action-btn" id="api-run-${esc(tc.id)}" onclick="runApiTest('${esc(tc.id)}')">▶ ${t('api_run_btn')}</button>`}
+              ${tc.apiLastRunAt ? `<span class="api-last-run">${t('api_last_run_prefix')} ${esc(new Date(tc.apiLastRunAt).toLocaleTimeString(LANG === 'en' ? 'en-US' : 'ar-EG'))}</span>` : ''}
+            </div>
+          </div>` : ''}
 
           <div class="exec-div"></div>
           <div class="exec-grid">
@@ -1666,10 +1737,11 @@ function render() {
                 <option value="skip" ${tc.status === 'skip' ? 'selected' : ''}>${t('stat_skip')}</option>
               </select>
             </div>
+            ${tc.apiRequest ? '' : `
             <div>
               <div class="elbl">${t('exec_device')}</div>
               <input type="text" value="${esc(tc.device || '')}" data-id="${esc(tc.id)}" onchange="updateExecutionField(this,'device')">
-            </div>
+            </div>`}
             <div>
               <div class="elbl">${t('exec_env')}</div>
               <input type="text" value="${esc(tc.environment || '')}" data-id="${esc(tc.id)}" onchange="updateExecutionField(this,'environment')">
@@ -2350,6 +2422,133 @@ async function forwardDriveAttachmentsToClickUp(tcId, clickupTaskId, onProgress)
   return { attempted: files.length, succeeded };
 }
 
+// ── Live API test execution ──────────────────────────────────────────────────
+// Fires the real HTTP request a generated "apiRequest" case describes and
+// compares the live response against "apiExpect", auto-setting pass/fail.
+// Base URL is never guessed/auto-filled — the tester must explicitly set it,
+// so a run always targets an environment they deliberately chose. Only GET
+// requests run by default; anything that can change data (POST/PUT/PATCH/
+// DELETE) is locked behind an explicit, confirmed opt-in.
+function isApiWriteMethod(method) {
+  return !['GET', 'HEAD', 'OPTIONS'].includes(String(method || '').toUpperCase());
+}
+
+function openApiSettingsModal() {
+  const modal = document.getElementById('api-settings-modal');
+  const urlInput = document.getElementById('api-base-url-input');
+  const tokenInput = document.getElementById('api-bearer-token-input');
+  const allowCheckbox = document.getElementById('api-allow-writes-checkbox');
+  if (urlInput) urlInput.value = API_BASE_URL;
+  if (tokenInput) tokenInput.value = API_BEARER_TOKEN;
+  if (allowCheckbox) allowCheckbox.checked = API_ALLOW_WRITES;
+  if (modal) modal.classList.add('open');
+}
+function closeApiSettingsModal() {
+  const modal = document.getElementById('api-settings-modal');
+  if (modal) modal.classList.remove('open');
+}
+function onApiAllowWritesToggle(checkbox) {
+  if (checkbox.checked && !confirm(t('api_allow_writes_confirm'))) {
+    checkbox.checked = false;
+  }
+}
+function saveApiSettings() {
+  const urlInput = document.getElementById('api-base-url-input');
+  const tokenInput = document.getElementById('api-bearer-token-input');
+  const allowCheckbox = document.getElementById('api-allow-writes-checkbox');
+  API_BASE_URL = (urlInput && urlInput.value || '').trim().replace(/\/+$/, '');
+  API_BEARER_TOKEN = (tokenInput && tokenInput.value || '').trim();
+  API_ALLOW_WRITES = !!(allowCheckbox && allowCheckbox.checked);
+  sessionStorage.setItem('qa_api_bearer_token', API_BEARER_TOKEN);
+  closeApiSettingsModal();
+  updateApiSettingsUI();
+  render();
+  autosaveProject();
+}
+function updateApiSettingsUI() {
+  const btn = document.getElementById('api-settings-btn');
+  if (btn) btn.textContent = API_BASE_URL ? `⚙️ ${t('api_settings_btn')} · ${API_BASE_URL}` : `⚙️ ${t('api_settings_btn')}`;
+}
+
+function buildApiRequestUrl(apiRequest) {
+  let url = API_BASE_URL + (apiRequest.path || '');
+  const query = apiRequest.query;
+  if (query && Object.keys(query).length) {
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([k, v]) => params.append(k, v));
+    url += (url.includes('?') ? '&' : '?') + params.toString();
+  }
+  return url;
+}
+
+async function runApiTest(tcId) {
+  const tc = TCS.find(c => c.id === tcId);
+  if (!tc || !tc.apiRequest) return;
+  if (!API_BASE_URL) {
+    alert(t('api_base_url_required'));
+    openApiSettingsModal();
+    return;
+  }
+  const method = (tc.apiRequest.method || 'GET').toUpperCase();
+  if (isApiWriteMethod(method) && !API_ALLOW_WRITES) {
+    alert(t('api_writes_locked_alert'));
+    return;
+  }
+  const btn = document.getElementById('api-run-' + tcId);
+  if (btn) { btn.disabled = true; btn.textContent = t('api_running'); }
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (API_BEARER_TOKEN) {
+    headers['Authorization'] = /^bearer\s/i.test(API_BEARER_TOKEN) ? API_BEARER_TOKEN : `Bearer ${API_BEARER_TOKEN}`;
+  }
+  const hasBody = method !== 'GET' && method !== 'HEAD' && tc.apiRequest.body;
+
+  let resp, bodyText = '';
+  try {
+    resp = await fetch(buildApiRequestUrl(tc.apiRequest), {
+      method,
+      headers,
+      body: hasBody ? JSON.stringify(tc.apiRequest.body) : undefined,
+    });
+    bodyText = await resp.text();
+  } catch (e) {
+    // Network-down or a CORS-blocked response — indistinguishable client-side
+    tc.status = 'fail';
+    tc.actual = t('api_network_fail_prefix') + (e.message || '');
+    tc.apiLastRunAt = Date.now();
+    autosaveProject();
+    render();
+    return;
+  }
+
+  const expectedStatuses = (tc.apiExpect && tc.apiExpect.status) || [];
+  const statusOk = !expectedStatuses.length || expectedStatuses.includes(resp.status);
+  const bodyContains = (tc.apiExpect && tc.apiExpect.bodyContains) || [];
+  const bodyOk = bodyContains.every(s => bodyText.includes(s));
+  const passed = statusOk && bodyOk;
+
+  const truncatedBody = bodyText.length > 600 ? bodyText.slice(0, 600) + '…' : bodyText;
+  tc.status = passed ? 'pass' : 'fail';
+  tc.actual = `HTTP ${resp.status}` +
+    (expectedStatuses.length ? ` (${t('api_expected_label')} ${expectedStatuses.join('/')})` : '') +
+    (bodyContains.length ? ` — ${bodyOk ? t('api_body_contains_ok') : t('api_body_contains_fail_prefix') + bodyContains.filter(s => !bodyText.includes(s)).join(', ')}` : '') +
+    `\n${truncatedBody}`;
+  tc.apiLastRunAt = Date.now();
+  autosaveProject();
+  render();
+}
+
+async function runAllApiTests() {
+  if (!API_BASE_URL) { alert(t('api_base_url_required')); openApiSettingsModal(); return; }
+  const runnable = TCS.filter(tc => tc.apiRequest && (!isApiWriteMethod(tc.apiRequest.method) || API_ALLOW_WRITES));
+  if (!runnable.length) { alert(t('api_none_runnable')); return; }
+  // Sequential on purpose — avoids hammering the target API with a burst of
+  // concurrent requests, and keeps per-case error handling simple/isolated.
+  for (const tc of runnable) {
+    await runApiTest(tc.id);
+  }
+}
+
 // ── Platform checkboxes → dynamic tabs ──────────────────────────────────────
 function getSelectedPlatformDefs() {
   const checked = new Set(Array.from(document.querySelectorAll('#plat-grid input:checked')).map(i => i.dataset.plat));
@@ -2694,7 +2893,29 @@ JSON format:
       ]
     }
   ]
+}${apiCollectionText ? `
+
+For API-collection-derived cases ONLY (platform: "API"), also add two extra fields so the case can be executed automatically — "apiRequest" (the real request to send) and "apiExpect" (what a pass looks like), using the exact method/path/fields from the collection:
+{
+  "id": "TC-002",
+  "title": "...",
+  "priority": "P1",
+  "category": "Explicit",
+  "platform": "API",
+  "pre": "...",
+  "steps": "...",
+  "exp": "...",
+  "apiRequest": { "method": "POST", "path": "/fee-enquiries", "body": { "enquiryType": "test" }, "query": {} },
+  "apiExpect": { "status": [200, 201], "bodyContains": [] }
 }
+Rules for these two fields:
+  - "method" must be exactly one of GET, POST, PUT, PATCH, DELETE — taken directly from the collection.
+  - "path" must be the exact collection path (with real placeholder values substituted for any {id}-style segments where sensible, e.g. "/members/1").
+  - "body" is only present for methods that send one, and only includes fields actually defined in the collection for that endpoint.
+  - "query" is only present when the case is specifically about query parameters.
+  - "apiExpect.status" is an array of the HTTP status codes that count as a pass for this specific case (e.g. a validation-error case expects [400], a happy-path case expects [200, 201], a not-found case expects [404]).
+  - "apiExpect.bodyContains" is an optional array of short substrings that must appear somewhere in the response body for the case to pass (e.g. the name of a required field mentioned in a validation error) — omit or leave empty when there's nothing specific worth asserting on.
+  - Never add these two fields to non-API-collection-derived cases.` : ''}
 
 Platform values to use (cover ALL of these that apply):
 ${platformList}
@@ -2710,7 +2931,8 @@ Rules:
 8. ${rule8}
 9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)
 10. Also include non-functional test cases regardless of whether the spec mentions them: page performance under normal/peak load (target <3s, degrade gracefully on throttled connections), basic SEO (titles/meta tags, canonical URLs, sitemap entries, redirect correctness), cookie-consent/privacy-notice banner and personal-data handling, responsive layout on foldable devices in addition to desktop/tablet/mobile, and accessibility captions/transcripts for any audio/video content${apiCollectionText ? '' : '.'}${apiCollectionText ? `
-11. An API collection (real endpoint definitions) is provided below after the feature spec. For each relevant endpoint, add dedicated API-level test cases referencing the exact method, path, and field names given (never invent endpoints not listed): a successful request with valid data, required-field/validation errors, unauthorized/forbidden access where auth applies, not-found for invalid IDs, and rate-limit/server-error handling where relevant. Tag every one of these with platform: "API" (not "Back-end") so they are distinguishable as collection-derived endpoint tests. These are in addition to, not a replacement for, the SRS-based test cases.` : ''}
+11. An API collection (real endpoint definitions) is provided below after the feature spec. For each relevant endpoint, add dedicated API-level test cases referencing the exact method, path, and field names given (never invent endpoints not listed): a successful request with valid data, required-field/validation errors, unauthorized/forbidden access where auth applies, not-found for invalid IDs, and rate-limit/server-error handling where relevant. Tag every one of these with platform: "API" (not "Back-end") so they are distinguishable as collection-derived endpoint tests. These are in addition to, not a replacement for, the SRS-based test cases.
+12. For every one of those API-collection-derived cases, also include the "apiRequest"/"apiExpect" fields described above so the case can be executed automatically — see the extra example in the JSON format section.` : ''}
 
 Feature spec:
 ${srsText}${apiCollectionText ? `
@@ -2858,7 +3080,7 @@ function buildManualPrompt(lang) {
     ? ('Do not stop at a minimum — generate as many test cases as the spec can genuinely support, aiming for exhaustive, comprehensive coverage across ' + platformNames + ' (roughly 800-1000 test cases for a reasonably detailed spec). Only stop once every happy path, validation rule, error state, and edge case you can identify has its own case.')
     : ('Minimum ' + tcCount + ' test cases, aim for complete coverage across ' + platformNames);
 
-  return 'You are a senior QA engineer. Read the SRS/feature spec below and generate a comprehensive test case list.\n\nCreate a FILE called test_cases.json and write ONLY a valid JSON object into it \u2014 no markdown, no backticks, no explanation before or after the file.\n\nJSON format:\n{\n  "feature": "Feature name here",\n  "platform": "Frontend & CMS & API",\n  "generated": "YYYY-MM-DD",\n  "sections": [\n    {\n      "name": "Section name",\n      "cases": [\n        {\n          "id": "TC-001",\n          "title": "Short descriptive title",\n          "priority": "P1",\n          "category": "Explicit",\n          "platform": "Frontend",\n          "pre": "Precondition text",\n          "steps": "1. Step one\\n2. Step two\\n3. Step three",\n          "exp": "Expected result \u2014 be specific, name the API endpoint, parameter, CMS state, or UI element",\n          "environment": "e.g. Android 14, Pixel 8 / Chrome 128, Staging API (optional)"\n        }\n      ]\n    }\n  ]\n}\n\nPlatform values to use (cover ALL of these that apply):\n' + platformList + '\n\nRules:\n1. ' + rule1 + '\n2. Keep API endpoints, parameters, system roles, and technical terms in English (e.g. GET /api/verify, is_active = 1, Publisher, RTL/LTR)\n3. priority: P1 = critical flow/security, P2 = important feature, P3 = edge cases/nice-to-have\n4. category: "Explicit" if it comes directly from the spec, "Implicit" if it is a standard web/system expectation beyond the spec\n5. Cover ALL of these for EACH platform mentioned in the spec:\n   a. Happy path \u2014 main success flows (submitting forms, publishing content, successful API calls)\n   b. Validation \u2014 empty fields, incorrect formats, boundary values, XSS/SQL injection prevention\n   c. Error states \u2014 API errors, network loss, server 500, timeout, rate limit reached\n   d. UI states \u2014 loading spinners, empty states, success/error messages, RTL/LTR layout\n   e. Implicit Web \u2014 browser refresh mid-flow, browser back/forward, session expiry, multi-tab behavior\n   f. Frontend Specifics (if applicable) \u2014 responsive (Desktop, Tablet, Mobile Web), cross-browser (Chrome, Safari, Edge, Firefox), WCAG 2.2 AAA\n   g. CMS Specifics (if applicable) \u2014 concurrent editing conflicts, RBAC restrictions, multi-stage workflow transitions, audit logs\n   h. Mobile Specifics (if applicable, Android/iOS) \u2014 OS version fragmentation, permissions, offline behavior, push notifications, app backgrounding\n   i. Security Specifics (if applicable) \u2014 authN/authZ boundaries, injection/XSS prevention, rate limiting, session handling\n   j. Accessibility Specifics (if applicable) \u2014 screen reader support, keyboard navigation, color contrast, WCAG 2.2 AAA\n   k. Business rules \u2014 each specific rule in the spec becomes a separate test case\n   l. UAT / End-to-End Scenarios \u2014 realistic, multi-step journeys written from the real end users perspective (not a single technical step), validating a complete business outcome, spanning multiple platforms/sections where relevant (e.g. an editor creates and publishes content in the CMS, then a visitor sees it live on the Frontend; or a customer places an order via the Frontend and support staff process it via the Dashboard)\n   m. Non-functional baseline — test these regardless of whether the spec mentions them: page performance under normal/peak load (target <3s, graceful behavior on throttled connections), basic SEO (page titles/meta tags, canonical URLs, sitemap entries, redirect correctness), cookie-consent/privacy-notice banner and personal-data handling, responsive layout on foldable devices in addition to desktop/tablet/mobile, and accessibility captions/transcripts for any audio/video content\n6. Steps must be numbered, one per line using \\n\n7. Expected result must be highly specific \u2014 never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states\n8. ' + rule8 + '\n9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)\n10. If the API Collection section below contains real content (not the placeholder), use it to generate precise API-level test cases referencing the exact method, path, and field names given (never invent endpoints not listed): successful requests, required-field/validation errors, unauthorized/forbidden access where auth applies, not-found for invalid IDs, and rate-limit/server-error handling where relevant — in addition to, not instead of, the SRS-based test cases. Tag every one of these with platform: "API" (not "Back-end") so they are distinguishable as collection-derived endpoint tests. If that section is empty or still the placeholder, ignore it entirely.\n\nFeature spec:\n[PASTE YOUR SRS HERE]\n\nOptional — API Collection (OpenAPI/Swagger JSON or Postman export): paste it below if you have one for this feature; otherwise delete this whole section.\n[PASTE YOUR API COLLECTION JSON HERE]';
+  return 'You are a senior QA engineer. Read the SRS/feature spec below and generate a comprehensive test case list.\n\nCreate a FILE called test_cases.json and write ONLY a valid JSON object into it \u2014 no markdown, no backticks, no explanation before or after the file.\n\nJSON format:\n{\n  "feature": "Feature name here",\n  "platform": "Frontend & CMS & API",\n  "generated": "YYYY-MM-DD",\n  "sections": [\n    {\n      "name": "Section name",\n      "cases": [\n        {\n          "id": "TC-001",\n          "title": "Short descriptive title",\n          "priority": "P1",\n          "category": "Explicit",\n          "platform": "Frontend",\n          "pre": "Precondition text",\n          "steps": "1. Step one\\n2. Step two\\n3. Step three",\n          "exp": "Expected result \u2014 be specific, name the API endpoint, parameter, CMS state, or UI element",\n          "environment": "e.g. Android 14, Pixel 8 / Chrome 128, Staging API (optional)"\n        }\n      ]\n    }\n  ]\n}\n\nIf (and only if) an API Collection is pasted below with real content, also add two extra fields to each collection-derived case (platform: "API") so it can be executed automatically — "apiRequest" (the real request to send) and "apiExpect" (what a pass looks like), using the exact method/path/fields from the collection:\n{\n  "id": "TC-002",\n  "platform": "API",\n  "apiRequest": { "method": "POST", "path": "/fee-enquiries", "body": { "enquiryType": "test" }, "query": {} },\n  "apiExpect": { "status": [200, 201], "bodyContains": [] }\n}\n"method" is exactly one of GET/POST/PUT/PATCH/DELETE from the collection. "path" is the exact collection path (real values substituted for any {id}-style segments). "body" only appears for methods that send one, using only fields the collection actually defines. "apiExpect.status" lists the HTTP status codes that count as a pass for that specific case. "apiExpect.bodyContains" is an optional array of short substrings the response body must contain, or omit it. Never add these two fields when no collection was pasted, or to non-API-collection cases.\n\nPlatform values to use (cover ALL of these that apply):\n' + platformList + '\n\nRules:\n1. ' + rule1 + '\n2. Keep API endpoints, parameters, system roles, and technical terms in English (e.g. GET /api/verify, is_active = 1, Publisher, RTL/LTR)\n3. priority: P1 = critical flow/security, P2 = important feature, P3 = edge cases/nice-to-have\n4. category: "Explicit" if it comes directly from the spec, "Implicit" if it is a standard web/system expectation beyond the spec\n5. Cover ALL of these for EACH platform mentioned in the spec:\n   a. Happy path \u2014 main success flows (submitting forms, publishing content, successful API calls)\n   b. Validation \u2014 empty fields, incorrect formats, boundary values, XSS/SQL injection prevention\n   c. Error states \u2014 API errors, network loss, server 500, timeout, rate limit reached\n   d. UI states \u2014 loading spinners, empty states, success/error messages, RTL/LTR layout\n   e. Implicit Web \u2014 browser refresh mid-flow, browser back/forward, session expiry, multi-tab behavior\n   f. Frontend Specifics (if applicable) \u2014 responsive (Desktop, Tablet, Mobile Web), cross-browser (Chrome, Safari, Edge, Firefox), WCAG 2.2 AAA\n   g. CMS Specifics (if applicable) \u2014 concurrent editing conflicts, RBAC restrictions, multi-stage workflow transitions, audit logs\n   h. Mobile Specifics (if applicable, Android/iOS) \u2014 OS version fragmentation, permissions, offline behavior, push notifications, app backgrounding\n   i. Security Specifics (if applicable) \u2014 authN/authZ boundaries, injection/XSS prevention, rate limiting, session handling\n   j. Accessibility Specifics (if applicable) \u2014 screen reader support, keyboard navigation, color contrast, WCAG 2.2 AAA\n   k. Business rules \u2014 each specific rule in the spec becomes a separate test case\n   l. UAT / End-to-End Scenarios \u2014 realistic, multi-step journeys written from the real end users perspective (not a single technical step), validating a complete business outcome, spanning multiple platforms/sections where relevant (e.g. an editor creates and publishes content in the CMS, then a visitor sees it live on the Frontend; or a customer places an order via the Frontend and support staff process it via the Dashboard)\n   m. Non-functional baseline — test these regardless of whether the spec mentions them: page performance under normal/peak load (target <3s, graceful behavior on throttled connections), basic SEO (page titles/meta tags, canonical URLs, sitemap entries, redirect correctness), cookie-consent/privacy-notice banner and personal-data handling, responsive layout on foldable devices in addition to desktop/tablet/mobile, and accessibility captions/transcripts for any audio/video content\n6. Steps must be numbered, one per line using \\n\n7. Expected result must be highly specific \u2014 never write "it works correctly". Mention exact UI changes, HTTP response codes, or database states\n8. ' + rule8 + '\n9. Fill "environment" when platform/device context is meaningful (OS/browser version, device model, or server environment)\n10. If the API Collection section below contains real content (not the placeholder), use it to generate precise API-level test cases referencing the exact method, path, and field names given (never invent endpoints not listed): successful requests, required-field/validation errors, unauthorized/forbidden access where auth applies, not-found for invalid IDs, and rate-limit/server-error handling where relevant — in addition to, not instead of, the SRS-based test cases. Tag every one of these with platform: "API" (not "Back-end") so they are distinguishable as collection-derived endpoint tests. If that section is empty or still the placeholder, ignore it entirely.\n11. When a real API collection was pasted, also include the "apiRequest"/"apiExpect" fields described earlier on every collection-derived case so it can be executed automatically.\n\nFeature spec:\n[PASTE YOUR SRS HERE]\n\nOptional — API Collection (OpenAPI/Swagger JSON or Postman export): paste it below if you have one for this feature; otherwise delete this whole section.\n[PASTE YOUR API COLLECTION JSON HERE]';
 }
 
 // ── File handling ─────────────────────────────────────────────────────────────
@@ -3240,6 +3462,10 @@ function buildTracker(data) {
       CLICKUP_LIST_ID = savedProject.meta.clickupListId;
       CLICKUP_LIST_NAME = savedProject.meta.clickupListName || '';
     }
+    // Restore the API base URL/write-guard — but never the bearer token,
+    // which stays session-only and must be re-entered via API Settings.
+    if (savedProject.meta.apiBaseUrl) API_BASE_URL = savedProject.meta.apiBaseUrl;
+    if (savedProject.meta.apiAllowWrites) API_ALLOW_WRITES = !!savedProject.meta.apiAllowWrites;
   }
   if (savedProject && savedProject.attachments) {
     driveFiles = savedProject.attachments;
@@ -3260,6 +3486,7 @@ function buildTracker(data) {
   }
 
   updateClickUpUI(); // reflect a restored ClickUp list choice (and any already-active session) in the chip
+  updateApiSettingsUI(); // reflect a restored API base URL, if any
   render(); // Render after initGoogleAuth has potentially set gUser
   showStatus('');
   autosaveProject();
@@ -3298,6 +3525,9 @@ function serializeProject() {
         // ClickUp list choice travels with the project — the token/session never does
         clickupListId: CLICKUP_LIST_ID || '',
         clickupListName: CLICKUP_LIST_NAME || '',
+        // Same pattern for API test execution — base URL travels, bearer token never does
+        apiBaseUrl: API_BASE_URL || '',
+        apiAllowWrites: !!API_ALLOW_WRITES,
       },
       attachments: driveFiles,
     },
@@ -3855,6 +4085,32 @@ window.addEventListener('load', () => {
       <div class="modal-actions">
         <button type="button" class="ghost" onclick="closeClickUpListModal()" data-i18n="na_cancel">إلغاء</button>
         <button type="button" class="primary" onclick="confirmClickUpList()" data-i18n="clickup_confirm_list_btn">✓ تأكيد</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ API Settings dialog (Live API test execution) ═══════════════════════════ -->
+<div class="modal-overlay" id="api-settings-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span data-i18n="api_settings_modal_title">⚙️ إعدادات تشغيل اختبارات API</span>
+      <button type="button" onclick="closeApiSettingsModal()" data-i18n-title="close_title" title="إغلاق">✕</button>
+    </div>
+    <div class="modal-body">
+      <p data-i18n="api_settings_desc">لتشغيل حالات API تلقائياً، حدد عنوان الخادم الفعلي الذي سترسل الطلبات الحقيقية إليه.</p>
+      <label for="api-base-url-input" data-i18n="api_base_url_label">عنوان الخادم الأساسي (Base URL)</label>
+      <input type="text" id="api-base-url-input" placeholder="https://staging.example.com/api">
+      <label for="api-bearer-token-input" data-i18n="api_bearer_token_label">Bearer Token (اختياري)</label>
+      <input type="password" id="api-bearer-token-input" placeholder="eyJhbGciOi...">
+      <label class="api-allow-writes-row">
+        <input type="checkbox" id="api-allow-writes-checkbox" onchange="onApiAllowWritesToggle(this)">
+        <span data-i18n="api_allow_writes_label">السماح بتشغيل الطلبات المُغيِّرة للبيانات (POST/PUT/PATCH/DELETE) تلقائياً</span>
+      </label>
+      <div class="modal-error" style="display:block" data-i18n="api_allow_writes_warning">⚠️ عند تفعيل هذا الخيار، سيتم فعلياً إنشاء/تعديل/حذف بيانات حقيقية على الخادم المحدد أعلاه. حالات GET تُشغَّل دائماً بأمان بدون الحاجة لتفعيله.</div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" onclick="closeApiSettingsModal()" data-i18n="na_cancel">إلغاء</button>
+        <button type="button" class="primary" onclick="saveApiSettings()" data-i18n="api_settings_save_btn">✓ حفظ</button>
       </div>
     </div>
   </div>
