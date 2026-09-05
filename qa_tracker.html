@@ -683,7 +683,6 @@ body.select-mode .tc-select{display:inline-flex}
       <button class="btn" id="select-mode-btn" onclick="toggleSelectMode()" data-i18n="select_mode_btn">☑️ تحديد متعدد</button>
       <button class="btn" onclick="openSpotcheckModal()" data-i18n="spotcheck_btn">🎲 فحص عشوائي</button>
       <button class="btn" id="api-settings-btn" onclick="openApiSettingsModal()" data-i18n="api_settings_btn">⚙️ إعدادات API</button>
-      <button class="btn" onclick="runAllApiTests()" data-i18n="api_run_all_btn">▶ تشغيل اختبارات API</button>
       <button class="btn btn-save" id="save-project-btn" onclick="saveProjectFile()" data-i18n="save_project_btn">💾 حفظ المشروع</button>
       <button class="btn btn-csv" onclick="exportCSV()">CSV</button>
       <div class="pdd" id="pdd">
@@ -1077,7 +1076,6 @@ const I18N = {
     clickup_unassigned_option: '— غير مُسنَد —',
     clickup_uploading_attachments: 'جارٍ رفع المرفقات',
     api_settings_btn: 'إعدادات API',
-    api_run_all_btn: '▶ تشغيل اختبارات API',
     api_settings_modal_title: '⚙️ إعدادات تشغيل اختبارات API',
     api_settings_desc: 'لتشغيل حالات API تلقائياً، حدد عنوان الخادم الفعلي الذي سترسل الطلبات الحقيقية إليه.',
     api_base_url_label: 'عنوان الخادم الأساسي (Base URL)',
@@ -1098,7 +1096,6 @@ const I18N = {
     api_expected_label: 'المتوقع:',
     api_body_contains_ok: 'محتوى الاستجابة مطابق للمتوقع',
     api_body_contains_fail_prefix: 'محتوى الاستجابة لا يحتوي على: ',
-    api_none_runnable: 'لا توجد حالات API قابلة للتشغيل التلقائي حالياً',
     gauth_banner_text: '📎 سجّل دخول بـ Google لرفع ملفات التوثيق لكل حالة اختبار',
     gauth_login_btn: '🔑 تسجيل الدخول بـ Google',
     gauth_skip_btn: 'لن أرفع ملفات ✕',
@@ -1329,7 +1326,6 @@ const I18N = {
     clickup_unassigned_option: '— Unassigned —',
     clickup_uploading_attachments: 'Uploading attachments',
     api_settings_btn: 'API Settings',
-    api_run_all_btn: '▶ Run API Tests',
     api_settings_modal_title: '⚙️ API Test Execution Settings',
     api_settings_desc: 'To run API cases automatically, set the real server the tool will send live requests to.',
     api_base_url_label: 'Base URL',
@@ -1350,7 +1346,6 @@ const I18N = {
     api_expected_label: 'expected:',
     api_body_contains_ok: 'response body matches expected content',
     api_body_contains_fail_prefix: 'response body is missing: ',
-    api_none_runnable: 'No API cases are currently runnable',
     gauth_banner_text: '📎 Sign in with Google to upload documentation files for each test case',
     gauth_login_btn: '🔑 Sign in with Google',
     gauth_skip_btn: "I won't upload files ✕",
@@ -2538,16 +2533,6 @@ async function runApiTest(tcId) {
   render();
 }
 
-async function runAllApiTests() {
-  if (!API_BASE_URL) { alert(t('api_base_url_required')); openApiSettingsModal(); return; }
-  const runnable = TCS.filter(tc => tc.apiRequest && (!isApiWriteMethod(tc.apiRequest.method) || API_ALLOW_WRITES));
-  if (!runnable.length) { alert(t('api_none_runnable')); return; }
-  // Sequential on purpose — avoids hammering the target API with a burst of
-  // concurrent requests, and keeps per-case error handling simple/isolated.
-  for (const tc of runnable) {
-    await runApiTest(tc.id);
-  }
-}
 
 // ── Platform checkboxes → dynamic tabs ──────────────────────────────────────
 function getSelectedPlatformDefs() {
